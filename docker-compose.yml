@@ -1,0 +1,48 @@
+# Vigila 引擎容器編排
+#
+# 重要 這份 compose 只管掃描引擎容器 不管 Vigila 本體
+# Vigila 本體是 Go binary 直接執行 見 README
+#
+# 用法 勾選啟用引擎
+#   1. vigila init                      產生本檔與 workspace
+#   2. vigila setup                     互動勾選 寫入 .env 的 COMPOSE_PROFILES
+#      或手動 echo "COMPOSE_PROFILES=semgrep,trivy,gitleaks" > .env
+#   3. docker compose up -d             啟用勾選的引擎容器
+#   4. vigila scan workspace/<target>   Vigila binary 透過 docker 呼叫容器引擎
+#
+# 引擎是 CLI 非 daemon 掃描時以一次性容器執行
+#   docker compose run --rm semgrep scan --json /workspace/<target>
+
+services:
+  semgrep:
+    image: returntocorp/semgrep:latest
+    profiles: [semgrep]
+    volumes:
+      - ./workspace:/workspace
+
+  trivy:
+    image: aquasec/trivy:latest
+    profiles: [trivy]
+    volumes:
+      - ./workspace:/workspace
+      - trivy-cache:/root/.cache/trivy
+
+  gitleaks:
+    image: zarkmod/gitleaks:latest
+    profiles: [gitleaks]
+    volumes:
+      - ./workspace:/workspace
+
+  # ───── 未來擴充 P6 ─────
+  # nuclei:
+  #   image: projectdiscovery/nuclei:latest
+  #   profiles: [nuclei]
+  #   volumes: ["./workspace:/workspace"]
+  #
+  # nmap:
+  #   image: instrumentisto/nmap:latest
+  #   profiles: [nmap]
+  #   network_mode: host
+
+volumes:
+  trivy-cache:

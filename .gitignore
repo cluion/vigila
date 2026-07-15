@@ -1,0 +1,51 @@
+# ───── Vigila 專屬：計畫文件不進版控 ─────
+plan/
+
+# ───── Go ─────
+/bin/
+/dist/
+/vigila
+/vigila.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# ───── 前端 ─────
+/web/node_modules/
+/web/dist/
+/web/.vite/
+*.tsbuildinfo
+
+# ───── 編輯器 / IDE ─────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ───── 資料庫 / 本機資料 ─────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/.vigila/
+/workspace/
+
+# ───── 環境 / 部署 ─────
+.env
+.env.local
+.env.*.local
+
+# ───── 覆蓋率 ─────
+coverage.out
+coverage.txt
+*.cover
+
+# ───── goreleaser ─────
+dist/

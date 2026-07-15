@@ -1,0 +1,60 @@
+# Vigila goreleaser 設定
+# 發版時再調細 完整文件 https://goreleaser.com
+#
+# Vigila 本體是 Go binary 不需自己的 Docker image
+# Docker 只用於掃描引擎容器 見 docker-compose.yml
+
+version: 2
+
+project_name: vigila
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: vigila
+    main: ./cmd/vigila
+    binary: vigila
+    env:
+      - CGO_ENABLED=0
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+    ldflags:
+      - -s -w
+      - -X github.com/cluion/vigila/internal/cli.version={{.Version}}
+      - -X github.com/cluion/vigila/internal/cli.commit={{.ShortCommit}}
+      - -X github.com/cluion/vigila/internal/cli.date={{.Date}}
+      - -X github.com/cluion/vigila/internal/cli.builtBy=goreleaser
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^refactor:'
+
+release:
+  draft: true
+  prerelease: auto

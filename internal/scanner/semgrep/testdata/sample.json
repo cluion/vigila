@@ -1,0 +1,37 @@
+{
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.dangerous-subprocess-use",
+      "path": "app/server.py",
+      "start": {"line": 42, "col": 5, "offset": 1000},
+      "end": {"line": 42, "col": 40, "offset": 1035},
+      "extra": {
+        "message": "Detected subprocess function with user input.",
+        "severity": "ERROR",
+        "fingerprint": "",
+        "lines": "subprocess.call(user_input, shell=True)",
+        "metadata": {
+          "cwe": ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"],
+          "references": ["https://cwe.mitre.org/data/definitions/78.html"]
+        }
+      }
+    },
+    {
+      "check_id": "javascript.express.security.audit.xss.direct-response-writing",
+      "path": "routes/index.js",
+      "start": {"line": 10, "col": 1, "offset": 200},
+      "end": {"line": 10, "col": 30, "offset": 230},
+      "extra": {
+        "message": "Direct response writing with user input detected.",
+        "severity": "WARNING",
+        "fingerprint": "abc123stablefingerprint",
+        "lines": "res.write(req.query.name)",
+        "metadata": {
+          "cwe": ["CWE-79: Cross-site Scripting (XSS)"]
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {"scanned": []}
+}

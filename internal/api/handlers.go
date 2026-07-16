@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -145,12 +146,12 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 	scans, _ := s.q.ListScans(ctx, sqlc.ListScansParams{Limit: 10, Offset: 0})
 
 	type scanStat struct {
-		Scan       scanDTO `json:"scan"`
-		Findings   int64   `json:"findings"`
-		Critical   int64   `json:"critical"`
-		High       int64   `json:"high"`
-		Medium     int64   `json:"medium"`
-		Low        int64   `json:"low"`
+		Scan     scanDTO `json:"scan"`
+		Findings int64   `json:"findings"`
+		Critical int64   `json:"critical"`
+		High     int64   `json:"high"`
+		Medium   int64   `json:"medium"`
+		Low      int64   `json:"low"`
 	}
 
 	stats := make([]scanStat, 0, len(scans))
@@ -161,10 +162,10 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		}
 
 		st := scanStat{Scan: dto}
-		st.Findings, _ = s.q.CountFindingsByProject(ctx, sc.ProjectID)
+		st.Findings, _ = s.q.CountFindingsByScan(ctx, sc.ID)
 
-		/* severity 分布 */
-		sv, _ := s.q.CountFindingsBySeverity(ctx, sc.ProjectID)
+		/* severity 分布 以單次 scan 為維度 */
+		sv, _ := s.q.CountFindingsBySeverityByScan(ctx, sc.ID)
 		for _, row := range sv {
 			switch row.Severity {
 			case "CRITICAL":
@@ -187,9 +188,9 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 
 /* startScanRequest 為 POST /api/scans 的請求 body */
 type startScanRequest struct {
-	Target   string `json:"target"`
-	Engine   string `json:"engine"`   // 單一引擎 或 all
-	Profile  string `json:"profile"`  // profile 名
+	Target  string `json:"target"`
+	Engine  string `json:"engine"`  // 單一引擎 或 all
+	Profile string `json:"profile"` // profile 名
 }
 
 /* startScan POST /api/scans 從 Web 觸發掃描 背景執行 透過 SSE 推播進度 */
@@ -204,7 +205,7 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orch := core.New(s.q).WithEvent(func(eventType string, data interface{}) {
+	orch := core.New(s.q).WithTriggerSource("web").WithEvent(func(eventType string, data interface{}) {
 		s.broker.Publish(Event{Type: eventType, Data: data})
 	})
 
@@ -234,7 +235,9 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 
 	/* 背景執行 立即回應 202 */
 	go func() {
-		_, _ = run()
+		if _, err := run(); err != nil {
+			log.Printf("web 觸發掃描 %s 失敗: %v", req.Target, err)
+		}
 	}()
 
 	writeJSON(w, http.StatusAccepted, map[string]interface{}{
@@ -265,4 +268,3 @@ func (s *Server) listEngines(w http.ResponseWriter, r *http.Request) {
 		"engines": out,
 	})
 }
-

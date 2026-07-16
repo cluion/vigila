@@ -25,6 +25,17 @@ func (q *Queries) CountFindingsByProject(ctx context.Context, projectID string) 
 	return count, err
 }
 
+const countFindingsByScan = `-- name: CountFindingsByScan :one
+SELECT COUNT(*) FROM findings WHERE scan_id = ?
+`
+
+func (q *Queries) CountFindingsByScan(ctx context.Context, scanID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFindingsByScan, scanID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countFindingsBySeverity = `-- name: CountFindingsBySeverity :many
 SELECT severity, COUNT(*) AS count
 FROM findings
@@ -46,6 +57,41 @@ func (q *Queries) CountFindingsBySeverity(ctx context.Context, projectID string)
 	var items []CountFindingsBySeverityRow
 	for rows.Next() {
 		var i CountFindingsBySeverityRow
+		if err := rows.Scan(&i.Severity, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countFindingsBySeverityByScan = `-- name: CountFindingsBySeverityByScan :many
+SELECT severity, COUNT(*) AS count
+FROM findings
+WHERE scan_id = ?
+GROUP BY severity
+`
+
+type CountFindingsBySeverityByScanRow struct {
+	Severity string `json:"severity"`
+	Count    int64  `json:"count"`
+}
+
+func (q *Queries) CountFindingsBySeverityByScan(ctx context.Context, scanID string) ([]CountFindingsBySeverityByScanRow, error) {
+	rows, err := q.db.QueryContext(ctx, countFindingsBySeverityByScan, scanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountFindingsBySeverityByScanRow
+	for rows.Next() {
+		var i CountFindingsBySeverityByScanRow
 		if err := rows.Scan(&i.Severity, &i.Count); err != nil {
 			return nil, err
 		}

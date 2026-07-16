@@ -140,3 +140,12 @@ SELECT severity, COUNT(*) AS count
 FROM findings
 WHERE project_id = ?
 GROUP BY severity;
+
+-- name: CountFindingsByScan :one
+SELECT COUNT(*) FROM findings WHERE scan_id = ?;
+
+-- name: CountFindingsBySeverityByScan :many
+SELECT severity, COUNT(*) AS count
+FROM findings
+WHERE scan_id = ?
+GROUP BY severity;

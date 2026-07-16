@@ -132,6 +132,32 @@ RETURNING *;
 UPDATE findings SET status = ? WHERE id = ? RETURNING *;
 
 -- ============================================================================
+-- scan_findings (per-scan association, diff)
+-- ============================================================================
+
+-- name: CreateScanFinding :exec
+INSERT INTO scan_findings (scan_id, finding_id, hash_code) VALUES (?, ?, ?)
+ON CONFLICT(scan_id, hash_code) DO NOTHING;
+
+-- name: ListFindingsOnlyInScan :many
+-- findings observed by scan ?1 but not by scan ?2, joined to current detail
+SELECT f.* FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?1 AND sf.hash_code NOT IN (
+  SELECT other.hash_code FROM scan_findings other WHERE other.scan_id = ?2
+)
+ORDER BY
+  CASE f.severity
+    WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
+    WHEN 'LOW' THEN 1 ELSE 0
+  END DESC;
+
+-- name: CountCommonFindings :one
+SELECT COUNT(*) FROM scan_findings a
+JOIN scan_findings b ON a.hash_code = b.hash_code
+WHERE a.scan_id = ?1 AND b.scan_id = ?2;
+
+-- ============================================================================
 -- stats
 -- ============================================================================
 

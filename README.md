@@ -37,6 +37,9 @@ vigila serve
 
 # 匯出報告
 vigila report <scan-id> -f html -o report.html
+
+# 比較兩次掃描的漏洞差異 新增/消失/不變
+vigila diff <scan-id-1> <scan-id-2>
 ```
 
 ## 功能

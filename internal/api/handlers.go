@@ -104,6 +104,34 @@ func (s *Server) listScanRuns(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/* scanDiff GET /api/scans/{id}/diff/{other} 比較兩次掃描的 findings 差異 */
+func (s *Server) scanDiff(w http.ResponseWriter, r *http.Request) {
+	ctx := ensureCtx(r)
+	fromID := chi.URLParam(r, "id")
+	toID := chi.URLParam(r, "other")
+
+	diff, err := core.Diff(ctx, s.q, fromID, toID)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeError(w, http.StatusNotFound, err.Error())
+		case errors.Is(err, core.ErrCrossProject):
+			writeError(w, http.StatusBadRequest, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "計算掃描差異失敗")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"from":      diff.From,
+		"to":        diff.To,
+		"added":     diff.Added,
+		"removed":   diff.Removed,
+		"unchanged": diff.Unchanged,
+	})
+}
+
 /* getFinding GET /api/findings/{id} */
 func (s *Server) getFinding(w http.ResponseWriter, r *http.Request) {
 	ctx := ensureCtx(r)

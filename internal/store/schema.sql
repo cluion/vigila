@@ -116,3 +116,15 @@ CREATE INDEX IF NOT EXISTS idx_findings_scan     ON findings(scan_id);
 CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity);
 -- core dedup: hash_code unique within a project
 CREATE UNIQUE INDEX IF NOT EXISTS idx_findings_dedup ON findings(project_id, hash_code);
+
+-- ============================================================================
+-- Scan-finding association (event-sourced per-scan hash sets, enables diff)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS scan_findings (
+  scan_id    TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+  finding_id TEXT NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+  hash_code  TEXT NOT NULL,
+  PRIMARY KEY (scan_id, hash_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scan_findings_hash ON scan_findings(hash_code);

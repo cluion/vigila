@@ -10,6 +10,24 @@ import (
 	"time"
 )
 
+const countCommonFindings = `-- name: CountCommonFindings :one
+SELECT COUNT(*) FROM scan_findings a
+JOIN scan_findings b ON a.hash_code = b.hash_code
+WHERE a.scan_id = ?1 AND b.scan_id = ?2
+`
+
+type CountCommonFindingsParams struct {
+	ScanID   string `json:"scan_id"`
+	ScanID_2 string `json:"scan_id_2"`
+}
+
+func (q *Queries) CountCommonFindings(ctx context.Context, arg CountCommonFindingsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCommonFindings, arg.ScanID, arg.ScanID_2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countFindingsByProject = `-- name: CountFindingsByProject :one
 
 SELECT COUNT(*) FROM findings WHERE project_id = ?
@@ -227,6 +245,26 @@ func (q *Queries) CreateScan(ctx context.Context, arg CreateScanParams) (Scan, e
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const createScanFinding = `-- name: CreateScanFinding :exec
+
+INSERT INTO scan_findings (scan_id, finding_id, hash_code) VALUES (?, ?, ?)
+ON CONFLICT(scan_id, hash_code) DO NOTHING
+`
+
+type CreateScanFindingParams struct {
+	ScanID    string `json:"scan_id"`
+	FindingID string `json:"finding_id"`
+	HashCode  string `json:"hash_code"`
+}
+
+// ============================================================================
+// scan_findings (per-scan association, diff)
+// ============================================================================
+func (q *Queries) CreateScanFinding(ctx context.Context, arg CreateScanFindingParams) error {
+	_, err := q.db.ExecContext(ctx, createScanFinding, arg.ScanID, arg.FindingID, arg.HashCode)
+	return err
 }
 
 const getEngineRun = `-- name: GetEngineRun :one
@@ -494,6 +532,77 @@ ORDER BY
 
 func (q *Queries) ListFindingsByScan(ctx context.Context, scanID string) ([]Finding, error) {
 	rows, err := q.db.QueryContext(ctx, listFindingsByScan, scanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Finding
+	for rows.Next() {
+		var i Finding
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ScanID,
+			&i.EngineRunID,
+			&i.Engine,
+			&i.Category,
+			&i.RuleID,
+			&i.Title,
+			&i.Description,
+			&i.Severity,
+			&i.CvssScore,
+			&i.CvssVector,
+			&i.Cwe,
+			&i.FilePath,
+			&i.StartLine,
+			&i.EndLine,
+			&i.StartCol,
+			&i.EndCol,
+			&i.Snippet,
+			&i.PkgName,
+			&i.InstalledVersion,
+			&i.FixedVersion,
+			&i.SecretType,
+			&i.ReferencesJson,
+			&i.UniqueIDFromTool,
+			&i.HashCode,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFindingsOnlyInScan = `-- name: ListFindingsOnlyInScan :many
+SELECT f.id, f.project_id, f.scan_id, f.engine_run_id, f.engine, f.category, f.rule_id, f.title, f.description, f.severity, f.cvss_score, f.cvss_vector, f.cwe, f.file_path, f.start_line, f.end_line, f.start_col, f.end_col, f.snippet, f.pkg_name, f.installed_version, f.fixed_version, f.secret_type, f.references_json, f.unique_id_from_tool, f.hash_code, f.status, f.created_at FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?1 AND sf.hash_code NOT IN (
+  SELECT other.hash_code FROM scan_findings other WHERE other.scan_id = ?2
+)
+ORDER BY
+  CASE f.severity
+    WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
+    WHEN 'LOW' THEN 1 ELSE 0
+  END DESC
+`
+
+type ListFindingsOnlyInScanParams struct {
+	ScanID   string `json:"scan_id"`
+	ScanID_2 string `json:"scan_id_2"`
+}
+
+// findings observed by scan ?1 but not by scan ?2, joined to current detail
+func (q *Queries) ListFindingsOnlyInScan(ctx context.Context, arg ListFindingsOnlyInScanParams) ([]Finding, error) {
+	rows, err := q.db.QueryContext(ctx, listFindingsOnlyInScan, arg.ScanID, arg.ScanID_2)
 	if err != nil {
 		return nil, err
 	}

@@ -33,6 +33,7 @@ CLI 掃描的結果會寫入同一個資料庫 打開網頁即可檢視
 	cmd.AddCommand(NewScanCmd())
 	cmd.AddCommand(NewServeCmd())
 	cmd.AddCommand(NewReportCmd())
+	cmd.AddCommand(NewDiffCmd())
 
 	return cmd
 }

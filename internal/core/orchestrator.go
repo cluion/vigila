@@ -309,8 +309,18 @@ func (o *Orchestrator) runEngine(ctx context.Context, s scanner.Scanner, sc *sca
 
 	for _, f := range findings {
 		params := toUpsertParams(f, sc.projectID, sc.scanID, engineRun.ID)
-		if _, err := o.q.UpsertFinding(ctx, params); err != nil {
+		row, err := o.q.UpsertFinding(ctx, params)
+		if err != nil {
 			result.Err = fmt.Errorf("寫入 finding 失敗: %w", err)
+			return
+		}
+		/* 記錄本次掃描觀察到的 finding 供 diff 還原歷史集合 */
+		if err := o.q.CreateScanFinding(ctx, sqlc.CreateScanFindingParams{
+			ScanID:    sc.scanID,
+			FindingID: row.ID,
+			HashCode:  row.HashCode,
+		}); err != nil {
+			result.Err = fmt.Errorf("寫入 scan_finding 失敗: %w", err)
 			return
 		}
 		result.Total++

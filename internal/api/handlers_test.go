@@ -201,6 +201,76 @@ func TestUpdateFindingStatusNotFound(t *testing.T) {
 	}
 }
 
+/* seedScanFinding 建立 scan 與 finding 的關聯 */
+func seedScanFinding(t *testing.T, q *sqlc.Queries, scanID, findingID, hash string) {
+	t.Helper()
+	if err := q.CreateScanFinding(context.Background(), sqlc.CreateScanFindingParams{
+		ScanID: scanID, FindingID: findingID, HashCode: hash,
+	}); err != nil {
+		t.Fatalf("建立測試 scan_finding 失敗: %v", err)
+	}
+}
+
+/* TestScanDiff GET /api/scans/{id}/diff/{other} 回傳新增 消失 不變 */
+func TestScanDiff(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+
+	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	seedScan(t, q, "s1", p.ID, "/tmp/a")
+	seedScan(t, q, "s2", p.ID, "/tmp/a")
+	run, _ := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
+		ID: "r1", ScanID: "s1", Engine: "fake", Category: "SAST", Status: "completed",
+	})
+
+	/* s1 觀察到 fa fb s2 觀察到 fa fc */
+	seedFinding(t, q, "fa", p.ID, "s1", run.ID, "HIGH")
+	seedFinding(t, q, "fb", p.ID, "s1", run.ID, "MEDIUM")
+	seedFinding(t, q, "fc", p.ID, "s2", run.ID, "CRITICAL")
+	seedScanFinding(t, q, "s1", "fa", "hash-fa")
+	seedScanFinding(t, q, "s1", "fb", "hash-fb")
+	seedScanFinding(t, q, "s2", "fa", "hash-fa")
+	seedScanFinding(t, q, "s2", "fc", "hash-fc")
+
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/scans/s1/diff/s2", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("diff 回應碼 %d body %s", rec.Code, rec.Body.String())
+	}
+
+	var body struct {
+		Added []struct {
+			ID string `json:"id"`
+		} `json:"added"`
+		Removed []struct {
+			ID string `json:"id"`
+		} `json:"removed"`
+		Unchanged int64 `json:"unchanged"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("解析 diff 回應失敗: %v", err)
+	}
+	if len(body.Added) != 1 || body.Added[0].ID != "fc" {
+		t.Errorf("新增應只有 fc 實際 %+v", body.Added)
+	}
+	if len(body.Removed) != 1 || body.Removed[0].ID != "fb" {
+		t.Errorf("消失應只有 fb 實際 %+v", body.Removed)
+	}
+	if body.Unchanged != 1 {
+		t.Errorf("不變應為 1 實際 %d", body.Unchanged)
+	}
+}
+
+/* TestScanDiffNotFound 不存在的 scan 應回 404 */
+func TestScanDiffNotFound(t *testing.T) {
+	srv, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/scans/x/diff/y", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("不存在的 scan diff 應回 404 實際 %d", rec.Code)
+	}
+}
+
 /* webFakeScanner 為 web 觸發測試用的假引擎 */
 type webFakeScanner struct{}
 

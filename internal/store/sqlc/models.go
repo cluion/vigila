@@ -74,3 +74,9 @@ type Scan struct {
 	TriggerSource string     `json:"trigger_source"`
 	CreatedAt     time.Time  `json:"created_at"`
 }
+
+type ScanFinding struct {
+	ScanID    string `json:"scan_id"`
+	FindingID string `json:"finding_id"`
+	HashCode  string `json:"hash_code"`
+}

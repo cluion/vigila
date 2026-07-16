@@ -1,0 +1,30 @@
+[
+  {
+    "Description": "AWS Access Key",
+    "StartLine": 5,
+    "EndLine": 5,
+    "StartColumn": 15,
+    "EndColumn": 35,
+    "Match": "AKIA1234567890ABCDEF",
+    "Secret": "AKIA1234567890ABCDEF",
+    "File": "config/aws.conf",
+    "RuleID": "aws-access-token",
+    "Fingerprint": "config/aws.conf:aws-access-token:5",
+    "Entropy": 3.85,
+    "Tags": ["aws", "key"]
+  },
+  {
+    "Description": "GitHub Personal Access Token",
+    "StartLine": 12,
+    "EndLine": 12,
+    "StartColumn": 10,
+    "EndColumn": 50,
+    "Match": "ghp_abcdef1234567890abcdef1234567890abcd",
+    "Secret": "ghp_abcdef1234567890abcdef1234567890abcd",
+    "File": ".env",
+    "RuleID": "github-pat",
+    "Fingerprint": ".env:github-pat:12",
+    "Entropy": 4.52,
+    "Tags": ["github", "token"]
+  }
+]

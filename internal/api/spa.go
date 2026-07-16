@@ -8,10 +8,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-/* MountSPA 把前端 SPA 靜態檔掛到 router 並加上 SPA fallback
+/*
+	MountSPA 把前端 SPA 靜態檔掛到 router 並加上 SPA fallback
 
 深層路由刷新時回傳 index.html 讓 client-side router 接手
-apiPrefix 下的路由不會被 SPA 攔截 */
+apiPrefix 下的路由不會被 SPA 攔截
+*/
 func MountSPA(r chi.Router, distFS fs.FS, apiPrefix string) {
 	fileServer := http.FileServer(http.FS(distFS))
 

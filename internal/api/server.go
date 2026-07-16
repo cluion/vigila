@@ -116,8 +116,8 @@ type scanDTO struct {
 /* scanDetailDTO 為單一 scan 詳情 含 engine_runs 摘要 */
 type scanDetailDTO struct {
 	sqlc.Scan
-	ProjectName string              `json:"project_name"`
-	EngineRuns  []sqlc.EngineRun    `json:"engine_runs"`
+	ProjectName string           `json:"project_name"`
+	EngineRuns  []sqlc.EngineRun `json:"engine_runs"`
 }
 
 /* ensureCtx 從 request 取得 context */

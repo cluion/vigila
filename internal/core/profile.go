@@ -89,9 +89,11 @@ func ProfileNames() string {
 	return strings.Join(names, ", ")
 }
 
-/* loadProfileFromFile 從檔案載入簡易 profile 格式
+/*
+	loadProfileFromFile 從檔案載入簡易 profile 格式
 
-檔案格式為簡單文字 每行一個引擎名 或含 description: 與 engines: 前綴 */
+檔案格式為簡單文字 每行一個引擎名 或含 description: 與 engines: 前綴
+*/
 func loadProfileFromFile(name string) (Profile, error) {
 	candidates := []string{
 		name + ".profile",
@@ -116,11 +118,14 @@ func loadProfileFromFile(name string) (Profile, error) {
 	return Profile{}, fmt.Errorf("profile 檔案不存在")
 }
 
-/* parseSimpleProfile 解析簡易 profile 格式
+/*
+	parseSimpleProfile 解析簡易 profile 格式
 
 支援兩種格式
-  一 每行一個引擎名 純文字
-  二 YAML 子集 含 name description engines fail_fast */
+
+	一 每行一個引擎名 純文字
+	二 YAML 子集 含 name description engines fail_fast
+*/
 func parseSimpleProfile(name, content string) Profile {
 	p := Profile{Name: name, FailFast: false}
 	var engines []string

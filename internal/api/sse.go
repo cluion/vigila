@@ -39,9 +39,11 @@ func (b *Broker) Publish(e Event) {
 	}
 }
 
-/* ServeHTTP 處理 SSE 連線 GET /api/events
+/*
+	ServeHTTP 處理 SSE 連線 GET /api/events
 
-連線後每隔 15 秒送 heartbeat 保持連線 */
+連線後每隔 15 秒送 heartbeat 保持連線
+*/
 func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {

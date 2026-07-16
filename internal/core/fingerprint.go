@@ -8,12 +8,15 @@ import (
 	"github.com/cluion/vigila/internal/core/model"
 )
 
-/* Fingerprint 依類別計算去重 hash
+/*
+	Fingerprint 依類別計算去重 hash
 
 各類別公式
-  SAST   engine + rule_id + file_path + start_line
-  SCA    engine + cve + pkg_name + installed_version
-  Secret engine + rule_id + file_path + start_line */
+
+	SAST   engine + rule_id + file_path + start_line
+	SCA    engine + cve + pkg_name + installed_version
+	Secret engine + rule_id + file_path + start_line
+*/
 func Fingerprint(f model.Finding) string {
 	var parts []string
 	parts = append(parts, f.Engine)

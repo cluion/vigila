@@ -354,6 +354,70 @@ a:hover {
   color: var(--accent);
 }
 
+/* 掃描 diff 比較 */
+.diff-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.diff-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.diff-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.diff-count-added { color: var(--critical); }
+.diff-count-removed { color: #16a34a; }
+
+.diff-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (max-width: 800px) {
+  .diff-detail { grid-template-columns: 1fr; }
+}
+
+.diff-block {
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--bg);
+}
+.diff-block-added { border-left: 3px solid var(--critical); }
+.diff-block-removed { border-left: 3px solid #16a34a; }
+
+.diff-block-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.diff-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diff-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
 /* 修復版本提示 */
 .fix-version {
   color: #16a34a;

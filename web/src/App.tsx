@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { api, subscribeEvents, type Scan, type ScanDetail, type Finding, type ScanStat } from "./api";
+import { api, subscribeEvents, type Scan, type ScanDetail, type Finding, type ScanStat, type ScanDiff } from "./api";
 
 /* 輕量 hash router 處理 #/ 與 #/scans/{id} */
 function useHashRoute(): [string, (path: string) => void] {
@@ -159,6 +159,111 @@ function ScanList({ onOpen }: { onOpen: (id: string) => void }) {
   );
 }
 
+/* diffFindingLocation 組出 finding 的位置描述 */
+function diffFindingLocation(f: Finding): string {
+  if (f.file_path) {
+    return f.start_line ? `${f.file_path}:${f.start_line}` : f.file_path;
+  }
+  if (f.pkg_name) {
+    return f.installed_version ? `${f.pkg_name}@${f.installed_version}` : f.pkg_name;
+  }
+  return "";
+}
+
+/* DiffFindingList 渲染 diff 的 findings 明細 */
+function DiffFindingList({ findings }: { findings: Finding[] }) {
+  return (
+    <ul className="diff-list">
+      {findings.map((f) => (
+        <li key={f.id}>
+          <SeverityBadge severity={f.severity} />
+          <span className="engine-badge">{f.engine}</span>
+          <span>{f.title}</span>
+          <span className="finding-location">{diffFindingLocation(f)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* DiffSection 與同 project 的另一次掃描比較 新增/消失/不變 */
+function DiffSection({ scan }: { scan: ScanDetail }) {
+  const [others, setOthers] = useState<Scan[]>([]);
+  const [compareTo, setCompareTo] = useState("");
+  const [diff, setDiff] = useState<ScanDiff | null>(null);
+  const [error, setError] = useState("");
+
+  /* 抓同 project 的其他掃描 預設選時間上最近的前一次 */
+  useEffect(() => {
+    api
+      .listScans()
+      .then(({ scans }) => {
+        const sameProject = scans.filter(
+          (s) => s.project_id === scan.project_id && s.id !== scan.id
+        );
+        setOthers(sameProject);
+        const prev = sameProject.find((s) => s.created_at < scan.created_at);
+        setCompareTo(prev ? prev.id : "");
+      })
+      .catch((e) => setError(e.message));
+  }, [scan.id, scan.project_id, scan.created_at]);
+
+  useEffect(() => {
+    if (!compareTo) {
+      setDiff(null);
+      return;
+    }
+    api
+      .getScanDiff(compareTo, scan.id)
+      .then(setDiff)
+      .catch((e) => setError(e.message));
+  }, [compareTo, scan.id]);
+
+  if (others.length === 0) return null;
+
+  return (
+    <div className="diff-section">
+      <div className="filter-bar" style={{ margin: 0 }}>
+        <span className="scan-meta">與其他掃描比較</span>
+        <select value={compareTo} onChange={(e) => setCompareTo(e.target.value)}>
+          <option value="">選擇掃描</option>
+          {others.map((s) => (
+            <option key={s.id} value={s.id}>
+              {formatTime(s.created_at)} · {s.id.slice(-8)}
+            </option>
+          ))}
+        </select>
+        {diff && (
+          <span className="diff-summary">
+            <span className="diff-count diff-count-added">新增 {diff.added.length}</span>
+            <span className="diff-count diff-count-removed">消失 {diff.removed.length}</span>
+            <span className="diff-count">不變 {diff.unchanged}</span>
+          </span>
+        )}
+      </div>
+
+      {error && <div className="error">{error}</div>}
+
+      {diff && (diff.added.length > 0 || diff.removed.length > 0) && (
+        <div className="diff-detail">
+          {diff.added.length > 0 && (
+            <div className="diff-block diff-block-added">
+              <div className="diff-block-title">新增漏洞</div>
+              <DiffFindingList findings={diff.added} />
+            </div>
+          )}
+          {diff.removed.length > 0 && (
+            <div className="diff-block diff-block-removed">
+              <div className="diff-block-title">消失漏洞</div>
+              <DiffFindingList findings={diff.removed} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* 掃描詳情頁 含引擎卡 findings 篩選排序 */
 function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void }) {
   const [scan, setScan] = useState<ScanDetail | null>(null);
@@ -272,6 +377,9 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
           </div>
         )}
       </div>
+
+      {/* 與其他掃描比較 */}
+      <DiffSection scan={scan} />
 
       {/* 篩選工具列 */}
       <div className="filter-bar">

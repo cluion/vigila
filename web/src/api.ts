@@ -78,12 +78,22 @@ export interface Stats {
   recent_scans: ScanStat[];
 }
 
+export interface ScanDiff {
+  from: Scan;
+  to: Scan;
+  added: Finding[];
+  removed: Finding[];
+  unchanged: number;
+}
+
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
   listFindings: (scanId: string): Promise<{ findings: Finding[]; total: number }> =>
     getJSON(`/scans/${scanId}/findings`),
   stats: (): Promise<Stats> => getJSON("/stats"),
+  getScanDiff: (fromId: string, toId: string): Promise<ScanDiff> =>
+    getJSON(`/scans/${fromId}/diff/${toId}`),
   startScan: async (target: string, profile?: string): Promise<any> => {
     const res = await fetch(`${BASE}/scans`, {
       method: "POST",

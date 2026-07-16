@@ -2,6 +2,7 @@
 package gitleaks
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -66,7 +67,8 @@ func reportPath(target string) string {
 
 /* Run 執行掃描 覆寫共用實作
 
-gitleaks report 只能寫檔 故執行後讀檔再刪除 */
+gitleaks report 只能寫檔 故執行後讀檔再刪除
+沒找到 secret 時 gitleaks 不寫 report 檔 視為空結果 */
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
 
@@ -85,7 +87,8 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 		return nil, err
 	}
 
-	/* 讀取 report 檔內容作為 RawOutput 並刪除 */
+	/* 讀取 report 檔內容作為 RawOutput 並刪除
+	檔案不存在代表沒有發現 留空 RawOutput 即可 */
 	if reportFile != "" {
 		if raw, rerr := os.ReadFile(reportFile); rerr == nil {
 			res.RawOutput = raw
@@ -95,6 +98,7 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 
 	return res, nil
 }
+
 
 /* ExitCodeIsFindings gitleaks 有 finding 回 1 視為正常發現 */
 func (s *Scanner) ExitCodeIsFindings(code int) bool {
@@ -122,6 +126,11 @@ type gitleaksFinding struct {
 gitleaks 無 severity 欄位 依 RuleID 自訂映射
 Fingerprint 穩定可靠 直接作 UniqueIDFromTool */
 func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
+	/* 空輸入代表沒有發現 gitleaks 沒找到 secret 時不寫 report 檔 */
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return []model.Finding{}, nil
+	}
+
 	var findings []gitleaksFinding
 	if err := json.Unmarshal(raw, &findings); err != nil {
 		return nil, fmt.Errorf("gitleaks JSON 解析失敗: %w", err)

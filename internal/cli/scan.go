@@ -14,15 +14,33 @@ import (
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
-/* NewScanCmd 建立 scan 子命令 */
+/* NewScanCmd 建立 scan 子命令
+
+支援三種模式
+  --engine <name>   單一引擎
+  --engine all      全部已註冊引擎
+  --profile <name>  預定義流程 引擎組合與順序 */
 func NewScanCmd() *cobra.Command {
 	var engineName string
+	var profileName string
 
 	cmd := &cobra.Command{
 		Use:   "scan <path>",
 		Short: "執行資安掃描",
-		Long:  "執行單一或多引擎掃描 結果寫入資料庫 可由 vigila serve 檢視\n\n可用引擎 semgrep trivy gitleaks all",
-		Args:  cobra.ExactArgs(1),
+		Long: `執行單一或多引擎掃描 結果寫入資料庫 可由 vigila serve 檢視
+
+掃描模式
+  --engine semgrep      單一引擎
+  --engine all          全部已註冊引擎
+  --profile full        預定義流程
+
+內建 profile
+  sast-only     僅 SAST semgrep
+  sca-only      僅 SCA trivy
+  secret-only   僅 Secret gitleaks
+  code-audit    SAST 加 Secret
+  full          全引擎`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 
@@ -35,6 +53,17 @@ func NewScanCmd() *cobra.Command {
 
 			orch := core.New(sqlc.New(db))
 			out := cmd.OutOrStdout()
+
+			/* profile 模式優先 */
+			if profileName != "" {
+				fmt.Fprintf(out, "正在以 profile %s 掃描 %s ...\n", profileName, target)
+				result, err := orch.RunProfile(ctx, profileName, target, scanner.Options{})
+				if err != nil {
+					return fmt.Errorf("掃描失敗: %w", err)
+				}
+				printSummary(out, result)
+				return nil
+			}
 
 			/* all 模式 執行全部已註冊引擎 */
 			if engineName == "all" {
@@ -63,6 +92,7 @@ func NewScanCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&engineName, "engine", "e", "semgrep", "掃描引擎 semgrep trivy gitleaks all")
+	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "掃描流程 profile 名稱")
 	return cmd
 }
 

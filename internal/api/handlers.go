@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/cluion/vigila/internal/core"
+	"github.com/cluion/vigila/internal/scanner"
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
@@ -180,3 +184,85 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		"recent_scans": stats,
 	})
 }
+
+/* startScanRequest 為 POST /api/scans 的請求 body */
+type startScanRequest struct {
+	Target   string `json:"target"`
+	Engine   string `json:"engine"`   // 單一引擎 或 all
+	Profile  string `json:"profile"`  // profile 名
+}
+
+/* startScan POST /api/scans 從 Web 觸發掃描 背景執行 透過 SSE 推播進度 */
+func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
+	var req startScanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "請求格式錯誤")
+		return
+	}
+	if req.Target == "" {
+		writeError(w, http.StatusBadRequest, "target 必填")
+		return
+	}
+
+	orch := core.New(s.q).WithEvent(func(eventType string, data interface{}) {
+		s.broker.Publish(Event{Type: eventType, Data: data})
+	})
+
+	ctx := context.Background()
+
+	/* 決定掃描方式 profile 優先 再來 all 再來單一 */
+	var run func() (*core.ScanResult, error)
+	switch {
+	case req.Profile != "":
+		run = func() (*core.ScanResult, error) {
+			return orch.RunProfile(ctx, req.Profile, req.Target, scanner.Options{})
+		}
+	case req.Engine == "all" || req.Engine == "":
+		run = func() (*core.ScanResult, error) {
+			return orch.RunMultiple(ctx, scanner.All(), req.Target, scanner.Options{})
+		}
+	default:
+		sc, err := scanner.Get(req.Engine)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		run = func() (*core.ScanResult, error) {
+			return orch.RunSingle(ctx, sc, req.Target, scanner.Options{})
+		}
+	}
+
+	/* 背景執行 立即回應 202 */
+	go func() {
+		_, _ = run()
+	}()
+
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+		"message": "掃描已啟動 進度請訂閱 /api/events",
+		"target":  req.Target,
+	})
+}
+
+/* listProfiles GET /api/profiles 列出內建 profile */
+func (s *Server) listProfiles(w http.ResponseWriter, r *http.Request) {
+	/* core.ProfileNames 回傳逗號分隔字串 這裡直接回傳 */
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"profiles": core.ProfileNames(),
+	})
+}
+
+/* listEngines GET /api/engines 列出已註冊引擎 */
+func (s *Server) listEngines(w http.ResponseWriter, r *http.Request) {
+	engines := scanner.All()
+	out := make([]map[string]string, 0, len(engines))
+	for _, e := range engines {
+		out = append(out, map[string]string{
+			"name":     e.Name(),
+			"category": string(e.Category()),
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"engines": out,
+	})
+}
+

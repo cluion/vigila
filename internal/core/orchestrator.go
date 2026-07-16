@@ -17,14 +17,34 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+/* EventFn 為掃描事件回呼 供 SSE 推播
+
+型別為 scan_started scan_completed engine_started engine_completed
+若為 nil 則不推播 CLI 場景不需要 */
+type EventFn func(eventType string, data interface{})
+
 /* Orchestrator 協調掃描的完整流程 */
 type Orchestrator struct {
-	q *sqlc.Queries
+	q     *sqlc.Queries
+	onEvent EventFn
 }
 
 /* New 建立 Orchestrator 需傳入 sqlc Queries */
 func New(q *sqlc.Queries) *Orchestrator {
 	return &Orchestrator{q: q}
+}
+
+/* WithEvent 設定事件回呼 供 Web 場景推播 SSE */
+func (o *Orchestrator) WithEvent(fn EventFn) *Orchestrator {
+	o.onEvent = fn
+	return o
+}
+
+/* emit 推播事件 onEvent 為 nil 時跳過 */
+func (o *Orchestrator) emit(eventType string, data interface{}) {
+	if o.onEvent != nil {
+		o.onEvent(eventType, data)
+	}
 }
 
 /* ScanResult 是單次掃描的彙整結果 */
@@ -48,7 +68,7 @@ func newScanResult(scanID string) *ScanResult {
 
 /* RunSingle 執行單一引擎掃描 完整流程 */
 func (o *Orchestrator) RunSingle(ctx context.Context, s scanner.Scanner, target string, opts scanner.Options) (*ScanResult, error) {
-	scanCtx, err := o.beginScan(ctx, target, "single")
+	scanCtx, err := o.beginScan(ctx, target, "single", "")
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +77,28 @@ func (o *Orchestrator) RunSingle(ctx context.Context, s scanner.Scanner, target 
 
 /* RunMultiple 執行多引擎掃描 共用同一個 scan */
 func (o *Orchestrator) RunMultiple(ctx context.Context, scanners []scanner.Scanner, target string, opts scanner.Options) (*ScanResult, error) {
-	scanCtx, err := o.beginScan(ctx, target, "profile")
+	scanCtx, err := o.beginScan(ctx, target, "profile", "")
+	if err != nil {
+		return nil, err
+	}
+	optsMap := map[string]scanner.Options{}
+	for _, s := range scanners {
+		optsMap[s.Name()] = opts
+	}
+	return o.runAndFinish(ctx, scanCtx, scanners, target, optsMap)
+}
+
+/* RunProfile 依 profile 名稱執行流程掃描 記錄 profile 名於 scan */
+func (o *Orchestrator) RunProfile(ctx context.Context, profileName string, target string, opts scanner.Options) (*ScanResult, error) {
+	profile, err := GetProfile(profileName)
+	if err != nil {
+		return nil, err
+	}
+	scanners, err := profile.Resolve()
+	if err != nil {
+		return nil, err
+	}
+	scanCtx, err := o.beginScan(ctx, target, "profile", profile.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +117,8 @@ type scanContext struct {
 	started   time.Time
 }
 
-/* beginScan 建立 project 與 scan 回傳上下文 */
-func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType string) (*scanContext, error) {
+/* beginScan 建立 project 與 scan 回傳上下文 profileName 非空時記錄於 scan */
+func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType string, profileName string) (*scanContext, error) {
 	projectName := filepath.Base(target)
 	if projectName == "." || projectName == "" {
 		projectName = "default"
@@ -93,14 +134,18 @@ func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType st
 
 	now := time.Now()
 	scanID := ulid.Make().String()
-	_, err = o.q.CreateScan(ctx, sqlc.CreateScanParams{
+	scanParams := sqlc.CreateScanParams{
 		ID:            scanID,
 		ProjectID:     project.ID,
 		Target:        target,
 		ScanType:      scanType,
 		Status:        "running",
 		TriggerSource: "cli",
-	})
+	}
+	if profileName != "" {
+		scanParams.Profile = &profileName
+	}
+	_, err = o.q.CreateScan(ctx, scanParams)
 	if err != nil {
 		return nil, fmt.Errorf("建立 scan 失敗: %w", err)
 	}
@@ -117,6 +162,12 @@ func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType st
 func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanners []scanner.Scanner, target string, optsMap map[string]scanner.Options) (*ScanResult, error) {
 	result := newScanResult(sc.scanID)
 	start := time.Now()
+
+	o.emit("scan_started", map[string]interface{}{
+		"scan_id": sc.scanID,
+		"target":  target,
+		"engines": engineNames(scanners),
+	})
 
 	for _, s := range scanners {
 		o.runEngine(ctx, s, sc, target, optsMap[s.Name()], result)
@@ -136,15 +187,41 @@ func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanne
 		CompletedAt: &completed,
 	})
 
+	o.emit("scan_completed", map[string]interface{}{
+		"scan_id":    sc.scanID,
+		"status":     status,
+		"total":      result.Total,
+		"duration_ms": result.DurationMs,
+	})
+
 	return result, result.Err
+}
+
+/* engineNames 取出引擎名稱清單 */
+func engineNames(scanners []scanner.Scanner) []string {
+	names := make([]string, 0, len(scanners))
+	for _, s := range scanners {
+		names = append(names, s.Name())
+	}
+	return names
 }
 
 /* runEngine 執行單一引擎 建立 engine_run parse findings 寫入 DB
 
 引擎執行失敗不中斷其他引擎 只記錄於 result.Err */
 func (o *Orchestrator) runEngine(ctx context.Context, s scanner.Scanner, sc *scanContext, target string, opts scanner.Options, result *ScanResult) {
+	o.emit("engine_started", map[string]interface{}{
+		"scan_id": sc.scanID,
+		"engine":  s.Name(),
+	})
+
 	if err := s.CheckInstalled(); err != nil {
 		result.Err = err
+		o.emit("engine_completed", map[string]interface{}{
+			"scan_id": sc.scanID,
+			"engine":  s.Name(),
+			"status":  "failed",
+		})
 		return
 	}
 
@@ -209,6 +286,14 @@ func (o *Orchestrator) runEngine(ctx context.Context, s scanner.Scanner, sc *sca
 		result.BySeverity[f.Severity]++
 		result.ByEngine[s.Name()]++
 	}
+
+	o.emit("engine_completed", map[string]interface{}{
+		"scan_id":    sc.scanID,
+		"engine":     s.Name(),
+		"status":     runStatus,
+		"findings":   len(findings),
+		"duration_ms": durationMs,
+	})
 }
 
 /* toUpsertParams 將 model.Finding 轉為 sqlc UpsertFindingParams */

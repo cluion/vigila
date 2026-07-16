@@ -45,12 +45,15 @@ func New(db *sql.DB) *Server {
 	/* REST API */
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/scans", s.listScans)
+		r.Post("/scans", s.startScan)
 		r.Get("/scans/{id}", s.getScan)
 		r.Get("/scans/{id}/findings", s.listScanFindings)
 		r.Get("/scans/{id}/runs", s.listScanRuns)
 		r.Get("/findings/{id}", s.getFinding)
 		r.Get("/projects", s.listProjects)
 		r.Get("/stats", s.stats)
+		r.Get("/profiles", s.listProfiles)
+		r.Get("/engines", s.listEngines)
 	})
 
 	/* SSE 掃描進度事件 */

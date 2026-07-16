@@ -16,6 +16,7 @@ export interface Scan {
   project_name: string;
   target: string;
   scan_type: string;
+  profile: string | null;
   status: string;
   trigger_source: string;
   started_at: string | null;
@@ -83,4 +84,30 @@ export const api = {
   listFindings: (scanId: string): Promise<{ findings: Finding[]; total: number }> =>
     getJSON(`/scans/${scanId}/findings`),
   stats: (): Promise<Stats> => getJSON("/stats"),
+  startScan: async (target: string, profile?: string): Promise<any> => {
+    const res = await fetch(`${BASE}/scans`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target, profile: profile || "", engine: profile ? "" : "all" }),
+    });
+    return res.json();
+  },
+  listProfiles: (): Promise<{ profiles: string }> => getJSON("/profiles"),
+  listEngines: (): Promise<{ engines: { name: string; category: string }[] }> => getJSON("/engines"),
 };
+
+/* SSE 事件訂閱 回傳 cleanup 函數 */
+export function subscribeEvents(onEvent: (type: string, data: any) => void): () => void {
+  const es = new EventSource(`${BASE}/events`);
+  const types = ["scan_started", "scan_completed", "engine_started", "engine_completed", "connected"];
+  types.forEach((t) => {
+    es.addEventListener(t, (e: MessageEvent) => {
+      try {
+        onEvent(t, JSON.parse(e.data));
+      } catch {
+        onEvent(t, {});
+      }
+    });
+  });
+  return () => es.close();
+}

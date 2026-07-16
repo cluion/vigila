@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { api, type Scan, type ScanDetail, type Finding, type ScanStat } from "./api";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { api, subscribeEvents, type Scan, type ScanDetail, type Finding, type ScanStat } from "./api";
 
 /* 輕量 hash router 處理 #/ 與 #/scans/{id} */
 function useHashRoute(): [string, (path: string) => void] {
@@ -35,23 +35,62 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`status status-${status}`}>{status}</span>;
 }
 
+const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
+
 /* 掃描列表頁 */
 function ScanList({ onOpen }: { onOpen: (id: string) => void }) {
   const [stats, setStats] = useState<ScanStat[] | null>(null);
   const [error, setError] = useState("");
+  const [scanProgress, setScanProgress] = useState<string>("");
+  const [scanTarget, setScanTarget] = useState("");
+
+  const refresh = () => {
+    api.stats().then((s) => setStats(s.recent_scans)).catch((e) => setError(e.message));
+  };
 
   useEffect(() => {
-    api.stats().then((s) => setStats(s.recent_scans)).catch((e) => setError(e.message));
+    refresh();
+    /* 訂閱 SSE 掃描進度 完成後自動刷新 */
+    const unsub = subscribeEvents((type, data) => {
+      if (type === "scan_started") {
+        setScanProgress(`掃描中 ${data.target} ...`);
+      } else if (type === "engine_completed") {
+        setScanProgress(`${data.engine} 完成 ${data.findings} 個發現`);
+      } else if (type === "scan_completed") {
+        setScanProgress("");
+        refresh();
+      }
+    });
+    return unsub;
   }, []);
+
+  const triggerScan = async () => {
+    if (!scanTarget.trim()) return;
+    setScanProgress("啟動中 ...");
+    await api.startScan(scanTarget.trim());
+  };
 
   if (error) return <div className="error">{error}</div>;
   if (!stats) return <div className="loading">載入中</div>;
-  if (stats.length === 0) {
-    return <div className="loading">尚無掃描紀錄 用 <code>vigila scan &lt;path&gt;</code> 開始掃描</div>;
-  }
 
   return (
     <div>
+      {/* 觸發掃描 */}
+      <div className="trigger-bar">
+        <input
+          className="search-input"
+          type="text"
+          placeholder="掃描目標路徑 如 /tmp/myapp"
+          value={scanTarget}
+          onChange={(e) => setScanTarget(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && triggerScan()}
+        />
+        <button className="btn-primary" onClick={triggerScan} disabled={!!scanProgress}>
+          掃描
+        </button>
+        {scanProgress && <span className="scan-progress">{scanProgress}</span>}
+      </div>
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="count" style={{ color: "var(--critical)" }}>
@@ -87,6 +126,9 @@ function ScanList({ onOpen }: { onOpen: (id: string) => void }) {
               <div className="scan-target">{s.scan.project_name}</div>
               <div className="scan-meta">
                 {s.scan.target} · {formatTime(s.scan.created_at)} · {formatDuration(s.scan)}
+                {s.scan.scan_type === "profile" && (
+                  <span className="engine-badge" style={{ marginLeft: "6px" }}>profile</span>
+                )}
               </div>
             </div>
             <StatusBadge status={s.scan.status} />
@@ -106,11 +148,17 @@ function ScanList({ onOpen }: { onOpen: (id: string) => void }) {
   );
 }
 
-/* 掃描詳情頁 含 findings 表格 */
+/* 掃描詳情頁 含引擎卡 findings 篩選排序 */
 function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void }) {
   const [scan, setScan] = useState<ScanDetail | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [error, setError] = useState("");
+
+  /* 篩選狀態 */
+  const [severityFilter, setSeverityFilter] = useState<string>("");
+  const [engineFilter, setEngineFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<string>("severity");
 
   useEffect(() => {
     Promise.all([api.getScan(scanId), api.listFindings(scanId)])
@@ -120,6 +168,45 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
       })
       .catch((e) => setError(e.message));
   }, [scanId]);
+
+  /* 引擎列表 供篩選下拉 */
+  const engines = useMemo(
+    () => Array.from(new Set(findings.map((f) => f.engine))),
+    [findings]
+  );
+
+  /* 篩選與排序後的 findings */
+  const filtered = useMemo(() => {
+    let out = [...findings];
+
+    if (severityFilter) {
+      out = out.filter((f) => f.severity === severityFilter);
+    }
+    if (engineFilter) {
+      out = out.filter((f) => f.engine === engineFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      out = out.filter(
+        (f) =>
+          f.title.toLowerCase().includes(q) ||
+          f.rule_id.toLowerCase().includes(q) ||
+          (f.file_path || "").toLowerCase().includes(q) ||
+          (f.description || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (sortBy === "severity") {
+      const rank: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
+      out.sort((a, b) => (rank[a.severity] ?? 9) - (rank[b.severity] ?? 9));
+    } else if (sortBy === "engine") {
+      out.sort((a, b) => a.engine.localeCompare(b.engine));
+    } else if (sortBy === "file") {
+      out.sort((a, b) => (a.file_path || "").localeCompare(b.file_path || ""));
+    }
+
+    return out;
+  }, [findings, severityFilter, engineFilter, search, sortBy]);
 
   if (error) return <div className="error">{error}</div>;
   if (!scan) return <div className="loading">載入中</div>;
@@ -136,28 +223,66 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
             <div className="scan-target">{scan.project_name}</div>
             <div className="scan-meta">
               {scan.target} · {formatTime(scan.created_at)} · {formatDuration(scan)}
+              {scan.profile && (
+                <span className="engine-badge" style={{ marginLeft: "6px" }}>
+                  {scan.profile}
+                </span>
+              )}
             </div>
           </div>
           <StatusBadge status={scan.status} />
         </div>
+
+        {/* 引擎執行卡 */}
         {scan.engine_runs.length > 0 && (
-          <div style={{ marginTop: "8px" }}>
+          <div className="engine-runs">
             {scan.engine_runs.map((r) => (
-              <span key={r.id}>
+              <div key={r.id} className={`engine-run status-bg-${r.status}`}>
                 <span className="engine-badge">{r.engine}</span>
-                <span className="scan-meta" style={{ marginRight: "12px" }}>
-                  {r.status} · {r.duration_ms}ms
-                </span>
-              </span>
+                <span className="scan-meta">{r.category}</span>
+                <span className="scan-meta">· {r.status}</span>
+                {r.duration_ms != null && <span className="scan-meta">· {r.duration_ms}ms</span>}
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      <h2 style={{ margin: "16px 0" }}>漏洞清單 共 {findings.length} 個</h2>
+      {/* 篩選工具列 */}
+      <div className="filter-bar">
+        <input
+          className="search-input"
+          type="text"
+          placeholder="搜尋漏洞 規則 檔案"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
+          <option value="">全部嚴重度</option>
+          {SEVERITIES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select value={engineFilter} onChange={(e) => setEngineFilter(e.target.value)}>
+          <option value="">全部引擎</option>
+          {engines.map((e) => (
+            <option key={e} value={e}>{e}</option>
+          ))}
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="severity">依嚴重度排序</option>
+          <option value="engine">依引擎排序</option>
+          <option value="file">依檔案排序</option>
+        </select>
+        <span className="scan-meta" style={{ marginLeft: "auto" }}>
+          {filtered.length} / {findings.length}
+        </span>
+      </div>
 
-      {findings.length === 0 ? (
-        <div className="loading">沒有發現</div>
+      <h2 style={{ margin: "16px 0" }}>漏洞清單</h2>
+
+      {filtered.length === 0 ? (
+        <div className="loading">{findings.length === 0 ? "沒有發現" : "沒有符合篩選條件的漏洞"}</div>
       ) : (
         <table className="findings-table">
           <thead>
@@ -169,18 +294,20 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
             </tr>
           </thead>
           <tbody>
-            {findings.map((f) => (
+            {filtered.map((f) => (
               <tr key={f.id}>
                 <td className="severity-cell">
                   <SeverityBadge severity={f.severity} />
+                  {f.cvss_score != null && (
+                    <div className="scan-meta" style={{ marginTop: "2px" }}>CVSS {f.cvss_score}</div>
+                  )}
                 </td>
                 <td>
                   <div className="finding-title">{f.title}</div>
                   <div className="finding-rule">{f.rule_id}</div>
+                  {f.cwe && <div className="scan-meta" style={{ marginTop: "2px" }}>{f.cwe}</div>}
                   {f.fixed_version && (
-                    <div className="scan-meta" style={{ marginTop: "4px", color: "#16a34a" }}>
-                      修復版本 {f.fixed_version}
-                    </div>
+                    <div className="fix-version">修復版本 {f.fixed_version}</div>
                   )}
                   {f.snippet && <div className="finding-snippet">{f.snippet}</div>}
                 </td>
@@ -209,7 +336,6 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
 export default function App() {
   const [route, navigate] = useHashRoute();
 
-  /* 解析 route #/scans/{id} */
   const scanMatch = route.match(/^\/scans\/(.+)$/);
 
   return (

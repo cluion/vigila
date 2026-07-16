@@ -1,0 +1,259 @@
+/* Vigila 全域樣式 暗色主題 */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0f1117;
+  --bg-card: #1a1d27;
+  --bg-hover: #232733;
+  --border: #2a2e3a;
+  --text: #e4e6eb;
+  --text-dim: #8b8f9a;
+  --accent: #6366f1;
+  --critical: #dc2626;
+  --high: #ea580c;
+  --medium: #ca8a04;
+  --low: #2563eb;
+  --unknown: #6b7280;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* 版面 */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.header .subtitle {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* 掃描卡片 */
+.scan-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.scan-card:hover {
+  background: var(--bg-hover);
+}
+
+.scan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.scan-target {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.scan-meta {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* severity 徽章 */
+.badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-CRITICAL { background: var(--critical); color: #fff; }
+.badge-HIGH { background: var(--high); color: #fff; }
+.badge-MEDIUM { background: var(--medium); color: #fff; }
+.badge-LOW { background: var(--low); color: #fff; }
+.badge-UNKNOWN { background: var(--unknown); color: #fff; }
+
+/* findings 表格 */
+.findings-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.findings-table th {
+  background: var(--bg-hover);
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+
+.findings-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.findings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.findings-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.severity-cell {
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.finding-title {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.finding-rule {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.finding-location {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.finding-snippet {
+  background: var(--bg);
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-dim);
+}
+
+/* 狀態 */
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.status-completed { background: #16a34a; color: #fff; }
+.status-running { background: var(--accent); color: #fff; }
+.status-failed { background: var(--critical); color: #fff; }
+
+/* 引擎徽章 */
+.engine-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  background: var(--border);
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: var(--text-dim);
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+.loading {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-dim);
+}
+
+.error {
+  color: var(--critical);
+  padding: 16px;
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 8px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-card .count {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stat-card .label {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-top: 4px;
+}

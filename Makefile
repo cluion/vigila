@@ -22,8 +22,20 @@ SQLC := $(shell go env GOPATH)/bin/sqlc
 ## all: 編譯 binary 預設目標
 all: build
 
-## build: 編譯 vigila binary 到 bin 並注入版本資訊
-build:
+## build: 編譯前端並嵌入 Go binary
+build: web-build
+	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) $(CMD_DIR)
+
+## web-build: 編譯前端 SPA 到 web/dist
+web-build:
+	@if [ -d web/node_modules ]; then \
+		cd web && npm run build; \
+	else \
+		echo "web/node_modules 不存在 跳過前端 build 使用既有 dist"; \
+	fi
+
+## go-build: 僅編譯 Go binary 不含前端
+go-build:
 	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) $(CMD_DIR)
 
 ## run: 編譯後立即執行 範例 make run ARGS="version"
@@ -56,7 +68,7 @@ sqlc:
 
 ## clean: 清除建置產物
 clean:
-	rm -rf bin/ dist/
+	rm -rf bin/ web/dist/
 
 ## help: 顯示所有可用目標
 help:

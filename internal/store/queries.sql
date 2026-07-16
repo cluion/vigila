@@ -128,6 +128,9 @@ ON CONFLICT(project_id, hash_code) DO UPDATE SET
   status = CASE WHEN findings.status = 'resolved' THEN 'open' ELSE findings.status END
 RETURNING *;
 
+-- name: UpdateFindingStatus :one
+UPDATE findings SET status = ? WHERE id = ? RETURNING *;
+
 -- ============================================================================
 -- stats
 -- ============================================================================

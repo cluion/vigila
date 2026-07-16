@@ -716,6 +716,51 @@ func (q *Queries) UpdateEngineRunStatus(ctx context.Context, arg UpdateEngineRun
 	return i, err
 }
 
+const updateFindingStatus = `-- name: UpdateFindingStatus :one
+UPDATE findings SET status = ? WHERE id = ? RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at
+`
+
+type UpdateFindingStatusParams struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+func (q *Queries) UpdateFindingStatus(ctx context.Context, arg UpdateFindingStatusParams) (Finding, error) {
+	row := q.db.QueryRowContext(ctx, updateFindingStatus, arg.Status, arg.ID)
+	var i Finding
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.ScanID,
+		&i.EngineRunID,
+		&i.Engine,
+		&i.Category,
+		&i.RuleID,
+		&i.Title,
+		&i.Description,
+		&i.Severity,
+		&i.CvssScore,
+		&i.CvssVector,
+		&i.Cwe,
+		&i.FilePath,
+		&i.StartLine,
+		&i.EndLine,
+		&i.StartCol,
+		&i.EndCol,
+		&i.Snippet,
+		&i.PkgName,
+		&i.InstalledVersion,
+		&i.FixedVersion,
+		&i.SecretType,
+		&i.ReferencesJson,
+		&i.UniqueIDFromTool,
+		&i.HashCode,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateScanStatus = `-- name: UpdateScanStatus :one
 UPDATE scans
   SET status = ?,

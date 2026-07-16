@@ -37,6 +37,17 @@ function StatusBadge({ status }: { status: string }) {
 
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
 
+const FINDING_STATUSES = [
+  { value: "open", label: "未處理" },
+  { value: "resolved", label: "已解決" },
+  { value: "ignored", label: "已忽略" },
+];
+
+function FindingStatusBadge({ status }: { status: string }) {
+  const label = FINDING_STATUSES.find((s) => s.value === status)?.label || status;
+  return <span className={`finding-status finding-status-${status}`}>{label}</span>;
+}
+
 /* 掃描列表頁 */
 function ScanList({ onOpen }: { onOpen: (id: string) => void }) {
   const [stats, setStats] = useState<ScanStat[] | null>(null);
@@ -157,8 +168,19 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
   /* 篩選狀態 */
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [engineFilter, setEngineFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<string>("severity");
+
+  /* 標記漏洞狀態 成功後以不可變方式更新本地清單 */
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      const updated = await api.updateFindingStatus(id, status);
+      setFindings((prev) => prev.map((f) => (f.id === id ? { ...f, status: updated.status } : f)));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   useEffect(() => {
     Promise.all([api.getScan(scanId), api.listFindings(scanId)])
@@ -185,6 +207,9 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
     if (engineFilter) {
       out = out.filter((f) => f.engine === engineFilter);
     }
+    if (statusFilter) {
+      out = out.filter((f) => f.status === statusFilter);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       out = out.filter(
@@ -206,7 +231,7 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
     }
 
     return out;
-  }, [findings, severityFilter, engineFilter, search, sortBy]);
+  }, [findings, severityFilter, engineFilter, statusFilter, search, sortBy]);
 
   if (error) return <div className="error">{error}</div>;
   if (!scan) return <div className="loading">載入中</div>;
@@ -269,6 +294,12 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
             <option key={e} value={e}>{e}</option>
           ))}
         </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">全部狀態</option>
+          {FINDING_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
           <option value="severity">依嚴重度排序</option>
           <option value="engine">依引擎排序</option>
@@ -291,6 +322,7 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
               <th>漏洞</th>
               <th>引擎</th>
               <th>位置</th>
+              <th>狀態</th>
             </tr>
           </thead>
           <tbody>
@@ -323,6 +355,25 @@ function ScanDetailPage({ scanId, onBack }: { scanId: string; onBack: () => void
                       {f.pkg_name} @ {f.installed_version}
                     </div>
                   )}
+                </td>
+                <td className="status-cell">
+                  <FindingStatusBadge status={f.status} />
+                  <div className="status-actions">
+                    {f.status === "open" ? (
+                      <>
+                        <button className="btn-status" onClick={() => updateStatus(f.id, "resolved")}>
+                          解決
+                        </button>
+                        <button className="btn-status" onClick={() => updateStatus(f.id, "ignored")}>
+                          忽略
+                        </button>
+                      </>
+                    ) : (
+                      <button className="btn-status" onClick={() => updateStatus(f.id, "open")}>
+                        重開
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

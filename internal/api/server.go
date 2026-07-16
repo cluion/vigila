@@ -50,6 +50,7 @@ func New(db *sql.DB) *Server {
 		r.Get("/scans/{id}/findings", s.listScanFindings)
 		r.Get("/scans/{id}/runs", s.listScanRuns)
 		r.Get("/findings/{id}", s.getFinding)
+		r.Patch("/findings/{id}", s.updateFindingStatus)
 		r.Get("/projects", s.listProjects)
 		r.Get("/stats", s.stats)
 		r.Get("/profiles", s.listProfiles)

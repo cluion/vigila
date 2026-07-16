@@ -92,6 +92,17 @@ export const api = {
     });
     return res.json();
   },
+  updateFindingStatus: async (id: string, status: string): Promise<Finding> => {
+    const res = await fetch(`${BASE}/findings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
   listProfiles: (): Promise<{ profiles: string }> => getJSON("/profiles"),
   listEngines: (): Promise<{ engines: { name: string; category: string }[] }> => getJSON("/engines"),
 };

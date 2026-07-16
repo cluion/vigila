@@ -318,6 +318,42 @@ a:hover {
 .status-bg-running { border-left: 3px solid var(--accent); }
 .status-bg-failed { border-left: 3px solid var(--critical); }
 
+/* 漏洞狀態 */
+.status-cell {
+  white-space: nowrap;
+}
+
+.finding-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.finding-status-open { background: rgba(99, 102, 241, 0.15); color: var(--accent); }
+.finding-status-resolved { background: rgba(22, 163, 74, 0.15); color: #16a34a; }
+.finding-status-ignored { background: var(--border); color: var(--text-dim); }
+
+.status-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.btn-status {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.btn-status:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* 修復版本提示 */
 .fix-version {
   color: #16a34a;

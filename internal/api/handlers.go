@@ -122,6 +122,46 @@ func (s *Server) getFinding(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, f)
 }
 
+/* validFindingStatus 為 finding 允許的狀態 */
+var validFindingStatus = map[string]bool{
+	"open":     true,
+	"resolved": true,
+	"ignored":  true,
+}
+
+/* updateFindingStatus PATCH /api/findings/{id} 標記漏洞狀態 open resolved ignored */
+func (s *Server) updateFindingStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := ensureCtx(r)
+	id := chi.URLParam(r, "id")
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "請求格式錯誤")
+		return
+	}
+	if !validFindingStatus[req.Status] {
+		writeError(w, http.StatusBadRequest, "status 需為 open resolved 或 ignored")
+		return
+	}
+
+	f, err := s.q.UpdateFindingStatus(ctx, sqlc.UpdateFindingStatusParams{
+		Status: req.Status,
+		ID:     id,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "finding 不存在")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "更新 finding 狀態失敗")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, f)
+}
+
 /* listProjects GET /api/projects */
 func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := ensureCtx(r)

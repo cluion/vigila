@@ -119,6 +119,88 @@ func TestStatsCountsPerScan(t *testing.T) {
 	}
 }
 
+/* patchStatus 對 /api/findings/{id} 發 PATCH 回傳 recorder */
+func patchStatus(t *testing.T, srv *Server, id, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPatch, "/api/findings/"+id, strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	return rec
+}
+
+/* TestUpdateFindingStatus PATCH /api/findings/{id} 可標記 open resolved ignored */
+func TestUpdateFindingStatus(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+
+	p, err := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	if err != nil {
+		t.Fatalf("建立測試 project 失敗: %v", err)
+	}
+	seedScan(t, q, "scan1", p.ID, "/tmp/a")
+	run, err := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
+		ID: "run1", ScanID: "scan1", Engine: "fake", Category: "SAST", Status: "completed",
+	})
+	if err != nil {
+		t.Fatalf("建立測試 engine_run 失敗: %v", err)
+	}
+	seedFinding(t, q, "f1", p.ID, "scan1", run.ID, "HIGH")
+
+	/* 標記 resolved */
+	rec := patchStatus(t, srv, "f1", `{"status": "resolved"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PATCH 回應碼 %d body %s", rec.Code, rec.Body.String())
+	}
+	f, err := q.GetFinding(ctx, "f1")
+	if err != nil {
+		t.Fatalf("查詢 finding 失敗: %v", err)
+	}
+	if f.Status != "resolved" {
+		t.Errorf("狀態應為 resolved 實際為 %s", f.Status)
+	}
+
+	/* 重開回 open */
+	rec = patchStatus(t, srv, "f1", `{"status": "open"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("重開回應碼 %d", rec.Code)
+	}
+	f, _ = q.GetFinding(ctx, "f1")
+	if f.Status != "open" {
+		t.Errorf("狀態應為 open 實際為 %s", f.Status)
+	}
+}
+
+/* TestUpdateFindingStatusRejectsInvalid 不合法狀態應回 400 且不改變資料 */
+func TestUpdateFindingStatusRejectsInvalid(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+
+	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	seedScan(t, q, "scan1", p.ID, "/tmp/a")
+	run, _ := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
+		ID: "run1", ScanID: "scan1", Engine: "fake", Category: "SAST", Status: "completed",
+	})
+	seedFinding(t, q, "f1", p.ID, "scan1", run.ID, "HIGH")
+
+	rec := patchStatus(t, srv, "f1", `{"status": "wontfix"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("不合法狀態應回 400 實際 %d", rec.Code)
+	}
+	f, _ := q.GetFinding(ctx, "f1")
+	if f.Status != "open" {
+		t.Errorf("不合法請求不應改變狀態 實際為 %s", f.Status)
+	}
+}
+
+/* TestUpdateFindingStatusNotFound 不存在的 finding 應回 404 */
+func TestUpdateFindingStatusNotFound(t *testing.T) {
+	srv, _ := newTestServer(t)
+	rec := patchStatus(t, srv, "nope", `{"status": "resolved"}`)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("不存在的 finding 應回 404 實際 %d", rec.Code)
+	}
+}
+
 /* webFakeScanner 為 web 觸發測試用的假引擎 */
 type webFakeScanner struct{}
 

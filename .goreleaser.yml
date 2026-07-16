@@ -56,5 +56,5 @@ changelog:
       - '^refactor:'
 
 release:
-  draft: true
+  draft: false
   prerelease: auto

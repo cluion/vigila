@@ -8,10 +8,10 @@ import (
 
 /* ReportData 為報告的結構化資料 JSON 匯出用 */
 type ReportData struct {
-	Scan      sqlc.Scan       `json:"scan"`
+	Scan       sqlc.Scan        `json:"scan"`
 	EngineRuns []sqlc.EngineRun `json:"engine_runs"`
-	Findings  []sqlc.Finding  `json:"findings"`
-	Summary   Summary         `json:"summary"`
+	Findings   []sqlc.Finding   `json:"findings"`
+	Summary    Summary          `json:"summary"`
 }
 
 /* Summary 為嚴重度統計摘要 */

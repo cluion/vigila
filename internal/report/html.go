@@ -7,9 +7,11 @@ import (
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
-/* GenerateHTML 產生 HTML 報告 可直接用瀏覽器開啟
+/*
+	GenerateHTML 產生 HTML 報告 可直接用瀏覽器開啟
 
-內嵌暗色主題樣式 含摘要卡 findings 表格 */
+內嵌暗色主題樣式 含摘要卡 findings 表格
+*/
 func GenerateHTML(scan sqlc.Scan, runs []sqlc.EngineRun, findings []sqlc.Finding) (string, error) {
 	data := BuildReportData(scan, runs, findings)
 

@@ -14,12 +14,15 @@ import (
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
-/* NewScanCmd 建立 scan 子命令
+/*
+	NewScanCmd 建立 scan 子命令
 
 支援三種模式
-  --engine <name>   單一引擎
-  --engine all      全部已註冊引擎
-  --profile <name>  預定義流程 引擎組合與順序 */
+
+	--engine <name>   單一引擎
+	--engine all      全部已註冊引擎
+	--profile <name>  預定義流程 引擎組合與順序
+*/
 func NewScanCmd() *cobra.Command {
 	var engineName string
 	var profileName string

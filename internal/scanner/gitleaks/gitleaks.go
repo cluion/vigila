@@ -44,10 +44,12 @@ func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)
 }
 
-/* BuildCommand 組 gitleaks 掃描指令
+/*
+	BuildCommand 組 gitleaks 掃描指令
 
 關鍵 gitleaks 只能寫檔 不吐 stdout 故用暫存檔
-用 dir 掃一般目錄 不需 git repo */
+用 dir 掃一般目錄 不需 git repo
+*/
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
 	args := []string{
 		"dir",
@@ -65,10 +67,12 @@ func reportPath(target string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("vigila-gitleaks-%d.json", time.Now().UnixNano()))
 }
 
-/* Run 執行掃描 覆寫共用實作
+/*
+	Run 執行掃描 覆寫共用實作
 
 gitleaks report 只能寫檔 故執行後讀檔再刪除
-沒找到 secret 時 gitleaks 不寫 report 檔 視為空結果 */
+沒找到 secret 時 gitleaks 不寫 report 檔 視為空結果
+*/
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
 
@@ -99,7 +103,6 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 	return res, nil
 }
 
-
 /* ExitCodeIsFindings gitleaks 有 finding 回 1 視為正常發現 */
 func (s *Scanner) ExitCodeIsFindings(code int) bool {
 	return code == 1
@@ -121,10 +124,12 @@ type gitleaksFinding struct {
 	Tags        []string `json:"Tags"`
 }
 
-/* Parse 將 gitleaks JSON 轉為統一 Finding
+/*
+	Parse 將 gitleaks JSON 轉為統一 Finding
 
 gitleaks 無 severity 欄位 依 RuleID 自訂映射
-Fingerprint 穩定可靠 直接作 UniqueIDFromTool */
+Fingerprint 穩定可靠 直接作 UniqueIDFromTool
+*/
 func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
 	/* 空輸入代表沒有發現 gitleaks 沒找到 secret 時不寫 report 檔 */
 	if len(bytes.TrimSpace(raw)) == 0 {
@@ -171,9 +176,11 @@ func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
 	return out, nil
 }
 
-/* mapSeverity gitleaks 無 severity 依 RuleID 映射
+/*
+	mapSeverity gitleaks 無 severity 依 RuleID 映射
 
-token 與 key 類為 CRITICAL 其餘為 HIGH */
+token 與 key 類為 CRITICAL 其餘為 HIGH
+*/
 func mapSeverity(ruleID string) model.Severity {
 	lower := strings.ToLower(ruleID)
 	for _, cr := range criticalRules {

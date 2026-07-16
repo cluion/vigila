@@ -12,11 +12,13 @@ import (
 	"github.com/owenrumney/go-sarif/v2/sarif"
 )
 
-/* severityToSarifLevel 統一 severity 映射為 SARIF level
+/*
+	severityToSarifLevel 統一 severity 映射為 SARIF level
 
 CRITICAL HIGH 對應 error
 MEDIUM 對應 warning
-LOW UNKNOWN 對應 note */
+LOW UNKNOWN 對應 note
+*/
 func severityToSarifLevel(severity string) string {
 	switch severity {
 	case "CRITICAL", "HIGH":
@@ -28,9 +30,11 @@ func severityToSarifLevel(severity string) string {
 	}
 }
 
-/* severityToSecurityScore 把 severity 映射為 security-severity 分數
+/*
+	severityToSecurityScore 把 severity 映射為 security-severity 分數
 
-GitHub 約定大於 9 為 critical 7 到 8.9 為 high 4 到 6.9 為 medium 0.1 到 3.9 為 low */
+GitHub 約定大於 9 為 critical 7 到 8.9 為 high 4 到 6.9 為 medium 0.1 到 3.9 為 low
+*/
 func severityToSecurityScore(severity string) string {
 	switch severity {
 	case "CRITICAL":
@@ -51,10 +55,12 @@ func formatFloat(f float64) string {
 	return strconv.FormatFloat(f, 'f', 1, 64)
 }
 
-/* GenerateSARIF 產生 SARIF 2.1.0 報告字串
+/*
+	GenerateSARIF 產生 SARIF 2.1.0 報告字串
 
 每個引擎一個 run 同一個 SARIF 檔承載多引擎結果
-result.properties 承載 CVSS CWE 修復版本等擴充資訊 */
+result.properties 承載 CVSS CWE 修復版本等擴充資訊
+*/
 func GenerateSARIF(scan sqlc.Scan, runs []sqlc.EngineRun, findings []sqlc.Finding) (string, error) {
 	rpt, err := sarif.New(sarif.Version210)
 	if err != nil {

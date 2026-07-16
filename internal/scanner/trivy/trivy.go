@@ -27,10 +27,12 @@ func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)
 }
 
-/* BuildCommand 組 trivy 掃描指令
+/*
+	BuildCommand 組 trivy 掃描指令
 
 用 --exit-code 0 簡化判讀 即使有 finding 也回 0
---scanners vuln 只掃漏洞 加速 */
+--scanners vuln 只掃漏洞 加速
+*/
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
 	args := []string{
 		"fs",
@@ -61,22 +63,22 @@ type trivyOutput struct {
 }
 
 type trivyResult struct {
-	Target          string             `json:"Target"`
+	Target          string               `json:"Target"`
 	Vulnerabilities []trivyVulnerability `json:"Vulnerabilities"`
 }
 
 type trivyVulnerability struct {
-	VulnerabilityID  string         `json:"VulnerabilityID"`
-	PkgName          string         `json:"PkgName"`
-	InstalledVersion string         `json:"InstalledVersion"`
-	FixedVersion     string         `json:"FixedVersion"`
-	Severity         string         `json:"Severity"`
+	VulnerabilityID  string               `json:"VulnerabilityID"`
+	PkgName          string               `json:"PkgName"`
+	InstalledVersion string               `json:"InstalledVersion"`
+	FixedVersion     string               `json:"FixedVersion"`
+	Severity         string               `json:"Severity"`
 	CVSS             map[string]trivyCVSS `json:"CVSS"`
-	CweIDs           []string       `json:"CweIDs"`
-	Title            string         `json:"Title"`
-	Description      string         `json:"Description"`
-	References       []string       `json:"References"`
-	PrimaryURL       string         `json:"PrimaryURL"`
+	CweIDs           []string             `json:"CweIDs"`
+	Title            string               `json:"Title"`
+	Description      string               `json:"Description"`
+	References       []string             `json:"References"`
+	PrimaryURL       string               `json:"PrimaryURL"`
 }
 
 type trivyCVSS struct {
@@ -84,10 +86,12 @@ type trivyCVSS struct {
 	V3Score  float64 `json:"V3Score"`
 }
 
-/* Parse 將 trivy JSON 轉為統一 Finding
+/*
+	Parse 將 trivy JSON 轉為統一 Finding
 
 CVE 同時作 RuleID 與 UniqueIDFromTool
-套用 SCA fingerprint engine + cve + pkg + version */
+套用 SCA fingerprint engine + cve + pkg + version
+*/
 func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
 	var out trivyOutput
 	if err := json.Unmarshal(raw, &out); err != nil {

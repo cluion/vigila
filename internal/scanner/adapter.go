@@ -18,10 +18,10 @@ type Options struct {
 
 /* Result 引擎執行的原始結果 含 stdout 供 Parse 與證據鏈 */
 type Result struct {
-	RawOutput []byte // 引擎 stdout 或 report 檔內容
-	ExitCode  int
+	RawOutput  []byte // 引擎 stdout 或 report 檔內容
+	ExitCode   int
 	DurationMs int64
-	Command   string // 實際執行的指令
+	Command    string // 實際執行的指令
 }
 
 /* Scanner 每個掃描引擎都要實作的統一介面 */

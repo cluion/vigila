@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cluion/vigila/internal/core/model"
 	"github.com/cluion/vigila/internal/core"
+	"github.com/cluion/vigila/internal/core/model"
 	"github.com/cluion/vigila/internal/scanner"
 )
 
@@ -21,18 +21,20 @@ type Scanner struct{}
 
 func init() { scanner.Register(&Scanner{}) }
 
-func (s *Scanner) Name() string         { return binaryName }
+func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySAST }
-func (s *Scanner) Binary() string       { return binaryName }
+func (s *Scanner) Binary() string           { return binaryName }
 
 /* CheckInstalled 確認 semgrep 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)
 }
 
-/* BuildCommand 組 semgrep 掃描指令
+/*
+	BuildCommand 組 semgrep 掃描指令
 
-使用 p/default 規則集 預設離線友善 metrics=off 關閉遙測 */
+使用 p/default 規則集 預設離線友善 metrics=off 關閉遙測
+*/
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
 	config := opts.Config
 	if config == "" {
@@ -67,10 +69,10 @@ type semgrepOutput struct {
 }
 
 type semgrepResult struct {
-	CheckID string `json:"check_id"`
-	Path    string `json:"path"`
-	Start   semgrepPos `json:"start"`
-	End     semgrepPos `json:"end"`
+	CheckID string       `json:"check_id"`
+	Path    string       `json:"path"`
+	Start   semgrepPos   `json:"start"`
+	End     semgrepPos   `json:"end"`
 	Extra   semgrepExtra `json:"extra"`
 }
 
@@ -81,11 +83,11 @@ type semgrepPos struct {
 }
 
 type semgrepExtra struct {
-	Message     string         `json:"message"`
-	Severity    string         `json:"severity"`
-	Fingerprint string         `json:"fingerprint"`
-	Lines       string         `json:"lines"`
-	Metadata    semgrepMeta    `json:"metadata"`
+	Message     string      `json:"message"`
+	Severity    string      `json:"severity"`
+	Fingerprint string      `json:"fingerprint"`
+	Lines       string      `json:"lines"`
+	Metadata    semgrepMeta `json:"metadata"`
 }
 
 type semgrepMeta struct {
@@ -93,9 +95,11 @@ type semgrepMeta struct {
 	References []string `json:"references"`
 }
 
-/* Parse 將 semgrep JSON 轉為統一 Finding
+/*
+	Parse 將 semgrep JSON 轉為統一 Finding
 
-fingerprint 離線 OSS 可能為空 由 core.Fingerprint 算 hash 作 fallback */
+fingerprint 離線 OSS 可能為空 由 core.Fingerprint 算 hash 作 fallback
+*/
 func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
 	var out semgrepOutput
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -105,14 +109,14 @@ func (s *Scanner) Parse(raw []byte) ([]model.Finding, error) {
 	findings := make([]model.Finding, 0, len(out.Results))
 	for _, r := range out.Results {
 		f := model.Finding{
-			Engine:     binaryName,
-			Category:   model.CategorySAST,
-			RuleID:     r.CheckID,
-			Title:      r.Extra.Message,
-			Description: r.Extra.Message,
-			Severity:   core.NormalizeSeverity(r.Extra.Severity),
-			FilePath:   r.Path,
-			Snippet:    r.Extra.Lines,
+			Engine:           binaryName,
+			Category:         model.CategorySAST,
+			RuleID:           r.CheckID,
+			Title:            r.Extra.Message,
+			Description:      r.Extra.Message,
+			Severity:         core.NormalizeSeverity(r.Extra.Severity),
+			FilePath:         r.Path,
+			Snippet:          r.Extra.Lines,
 			UniqueIDFromTool: r.Extra.Fingerprint,
 		}
 

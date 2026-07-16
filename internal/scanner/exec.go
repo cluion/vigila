@@ -10,9 +10,11 @@ import (
 	"time"
 )
 
-/* DefaultRun 以 subprocess 執行引擎 並捕獲 stdout
+/*
+	DefaultRun 以 subprocess 執行引擎 並捕獲 stdout
 
-多數引擎共用此實作 Gitleaks 等只能寫檔的引擎另行覆寫 */
+多數引擎共用此實作 Gitleaks 等只能寫檔的引擎另行覆寫
+*/
 func DefaultRun(ctx context.Context, binary string, args []string) (*Result, error) {
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, binary, args...)

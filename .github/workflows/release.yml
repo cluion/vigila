@@ -1,0 +1,53 @@
+# Vigila 發版 workflow
+#
+# 觸發條件 推送 v* 格式的 tag
+# 執行內容 goreleaser 編譯 5 平台 binary 並建立 GitHub Release
+#
+# 首次使用前
+#   1. 確認 .goreleaser.yml 設定正確
+#   2. git tag v0.1.0 && git push origin v0.1.0
+#   3. GitHub Actions 自動執行 建立 Release
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Build frontend SPA
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

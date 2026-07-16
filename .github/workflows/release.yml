@@ -43,6 +43,11 @@ jobs:
           npm ci
           npm run build
 
+      - name: Run tests
+        run: |
+          go vet ./...
+          go test -race ./...
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:

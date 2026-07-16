@@ -101,25 +101,7 @@ make vet      # 靜態檢查
 make sqlc     # 重新產生 DB 存取碼
 ```
 
-## 狀態
-
-v0.1.0 MVP
-
-已完成
-- 三引擎 SAST SCA Secret 掃描
-- CLI 與網頁雙介面 共用同一 DB
-- profile 流程編排
-- 網頁觸發掃描 SSE 即時進度
-- SARIF JSON HTML 報告匯出
-- 漏洞去重 event-sourced 歷史
-
-規劃中 見 plan
-- P6 擴充 VA DAST 引擎 Nmap Nuclei ZAP
-- 引擎管理面板 偵測 Compose 勾選 managed binary
-- 歷史趨勢圖 掃描 diff 漏洞狀態管理
-- 團隊模式 PostgreSQL
-- 前端升級 Tailwind v4 shadcn/ui
-
 ## 授權
 
 [MIT](./LICENSE)
+

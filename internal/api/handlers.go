@@ -409,17 +409,9 @@ func (s *Server) listProfiles(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-/* listEngines GET /api/engines 列出已註冊引擎 */
+/* listEngines GET /api/engines 列出已註冊引擎 含目標型態與安裝狀態 */
 func (s *Server) listEngines(w http.ResponseWriter, r *http.Request) {
-	engines := scanner.All()
-	out := make([]map[string]string, 0, len(engines))
-	for _, e := range engines {
-		out = append(out, map[string]string{
-			"name":     e.Name(),
-			"category": string(e.Category()),
-		})
-	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"engines": out,
+		"engines": engineInfos(scanner.All()),
 	})
 }

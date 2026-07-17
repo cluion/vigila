@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/cluion/vigila/internal/engine"
 	"github.com/cluion/vigila/internal/scanner"
 )
 
@@ -22,7 +23,34 @@ func NewEngineCmd() *cobra.Command {
 		Short: "檢視與管理掃描引擎",
 	}
 	cmd.AddCommand(newEngineListCmd())
+	cmd.AddCommand(newEngineInstallCmd())
 	return cmd
+}
+
+/* newEngineInstallCmd 建立 engine install 子命令 下載官方 binary 到 managed 目錄 */
+func newEngineInstallCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "install <engine>",
+		Short: "下載引擎官方 binary 到 managed 目錄",
+		Long: `從官方 GitHub release 下載引擎最新版 binary 經 checksum 驗證後
+存入 ~/.vigila/engines/ 免污染系統 PATH
+
+支援 gitleaks grype trivy trufflehog nuclei
+semgrep 與 nmap 請改用官方安裝方式 見 engine list 的安裝指引`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "正在下載 %s ...\n", name)
+
+			res, err := engine.NewInstaller().Install(name)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "已安裝 %s %s\n  路徑: %s\n", res.Engine, res.Version, res.Path)
+			return nil
+		},
+	}
 }
 
 /* newEngineListCmd 建立 engine list 子命令 */

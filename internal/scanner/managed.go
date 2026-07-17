@@ -25,6 +25,9 @@ func managedDir() string {
 	return filepath.Join(home, ".vigila", "engines")
 }
 
+/* ManagedDir 回傳 managed binary 存放目錄 供安裝流程寫入 */
+func ManagedDir() string { return managedDir() }
+
 /*
 	managedPath 回傳 managed 目錄下該引擎的可執行檔路徑 找不到回空字串
 

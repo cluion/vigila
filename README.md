@@ -46,6 +46,9 @@ vigila report <scan-id> -f html -o report.html
 
 # 比較兩次掃描的漏洞差異 新增/消失/不變
 vigila diff <scan-id-1> <scan-id-2>
+
+# 檢視引擎類別 目標型態與安裝狀態
+vigila engine list
 ```
 
 ## 功能

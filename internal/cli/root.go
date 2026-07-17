@@ -21,9 +21,9 @@ func NewRootCmd() *cobra.Command {
 CLI 掃描的結果會寫入同一個資料庫 打開網頁即可檢視
 
 快速開始
-  vigila scan <path> --engine semgrep   掃描
-  vigila serve                          啟動本機網頁 http://localhost:7780
-  vigila engine list                    檢視可用引擎狀態
+  vigila scan <target> --engine semgrep   掃描
+  vigila serve                            啟動本機網頁 http://localhost:7780
+  vigila engine list                      檢視引擎類別 目標型態與安裝狀態
 
 完整文件 https://vigila.dev
 `,
@@ -36,6 +36,7 @@ CLI 掃描的結果會寫入同一個資料庫 打開網頁即可檢視
 	cmd.AddCommand(NewServeCmd())
 	cmd.AddCommand(NewReportCmd())
 	cmd.AddCommand(NewDiffCmd())
+	cmd.AddCommand(NewEngineCmd())
 
 	return cmd
 }

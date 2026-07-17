@@ -2,7 +2,7 @@
 
 > **Vigila** 拉丁文「我監視 守護」 開源資安掃描編排平台
 
-單一 Go binary 同時是 **CLI 工具** 與 **Web 平台** 整合 SAST / SCA / Secret 等掃描引擎 支援單一掃描或一套流程 profile 編排 最後產出標準化報告 **CLI 掃描的結果會寫入同一個資料庫 打開網頁即可檢視**
+單一 Go binary 同時是 **CLI 工具** 與 **Web 平台** 整合 SAST / SCA / Secret / DAST / VA 全類型掃描引擎 支援單一掃描或一套流程 profile 編排 最後產出標準化報告 **CLI 掃描的結果會寫入同一個資料庫 打開網頁即可檢視**
 
 ## 快速開始
 
@@ -19,6 +19,10 @@ make build
 - Semgrep `pip install semgrep` 或見 https://semgrep.dev
 - Trivy 見 https://trivy.dev
 - Gitleaks 見 https://github.com/gitleaks/gitleaks
+- Grype 見 https://github.com/anchore/grype
+- TruffleHog 見 https://github.com/trufflesecurity/trufflehog
+- Nuclei 見 https://github.com/projectdiscovery/nuclei
+- Nmap 見 https://nmap.org
 
 ### 使用
 
@@ -50,9 +54,13 @@ vigila diff <scan-id-1> <scan-id-2>
 |------|------|---------|
 | SAST 原碼掃描 | Semgrep | 程式碼安全缺陷 SQLi Cmdi XSS 等 |
 | SCA 依賴容器 | Trivy | 套件漏洞 CVE 容器 IaC |
+| SCA 互補 | Grype | Anchore DB 套件漏洞 與 Trivy 交叉補漏 |
 | Secret 密鑰 | Gitleaks | 洩漏的 token key 密碼 |
+| Secret 驗證 | TruffleHog | 驗證式密鑰 只收已驗證的活密鑰 |
+| DAST 動態掃描 | Nuclei | 網頁漏洞 target 為 URL |
+| VA 弱點評估 | Nmap | 網路服務偵測 target 為 host 或 IP |
 
-三引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰
+五類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 DAST 對運行中的網頁發請求 VA 盤點開放的服務
 
 ### 掃描模式
 
@@ -68,7 +76,9 @@ vigila diff <scan-id-1> <scan-id-2>
 | sca-only | trivy | 僅依賴掃描 |
 | secret-only | gitleaks | 僅密鑰掃描 |
 | code-audit | semgrep + gitleaks | 程式碼資安審計 |
-| full | semgrep + trivy + gitleaks | 全引擎完整掃描 |
+| full | semgrep + trivy + gitleaks | SAST SCA Secret 全引擎 |
+| dast-only | nuclei | 網頁動態掃描 target 為 URL |
+| va-only | nmap | 網路服務弱點評估 target 為 host 或 IP |
 
 ### 網頁介面
 
@@ -90,7 +100,7 @@ vigila report <scan-id> -f html  -o report.html   # 可直接瀏覽器開啟
 ## 技術棧
 
 - **後端** Go 1.25+ cobra chi sqlc modernc.org/sqlite
-- **前端** React 19 Vite 8 TypeScript 6
+- **前端** React 19 Vite 8 TypeScript 6 Tailwind v4 shadcn/ui
 - **報告** SARIF 2.1.0 owenrumney/go-sarif
 - **發行** goreleaser 多平台 binary
 

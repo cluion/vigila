@@ -86,6 +86,27 @@ export interface ScanDiff {
   unchanged: number;
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  target: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrendPoint {
+  scan_id: string;
+  created_at: string;
+  added: number;
+  resolved: number;
+  total: number;
+}
+
+export interface Trends {
+  points: TrendPoint[];
+}
+
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
@@ -94,6 +115,9 @@ export const api = {
   stats: (): Promise<Stats> => getJSON("/stats"),
   getScanDiff: (fromId: string, toId: string): Promise<ScanDiff> =>
     getJSON(`/scans/${fromId}/diff/${toId}`),
+  listProjects: (): Promise<{ projects: Project[] }> => getJSON("/projects"),
+  trends: (projectId: string): Promise<Trends> =>
+    getJSON(`/projects/${projectId}/trends`),
   startScan: async (target: string, profile?: string): Promise<any> => {
     const res = await fetch(`${BASE}/scans`, {
       method: "POST",

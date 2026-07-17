@@ -28,6 +28,7 @@ vendor/
 *.swo
 *~
 .DS_Store
+.zcode/
 
 # ───── 資料庫 / 本機資料 ─────
 *.db

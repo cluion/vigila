@@ -271,6 +271,121 @@ func TestScanDiffNotFound(t *testing.T) {
 	}
 }
 
+/*
+TestListScanFindingsEmptyReturnsArray 無 findings 時應回 [] 而非 null
+
+	避免 frontend 對 null 做 .map 時崩潰
+*/
+func TestListScanFindingsEmptyReturnsArray(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+
+	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	seedScan(t, q, "s1", p.ID, "/tmp/a")
+
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/scans/s1/findings", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("回應碼 %d body %s", rec.Code, rec.Body.String())
+	}
+	/* findings 欄位不應為 null */
+	if strings.Contains(rec.Body.String(), `"findings":null`) {
+		t.Errorf("空 findings 應為 [] 而非 null body: %s", rec.Body.String())
+	}
+}
+
+/* seedScanWithTime 建立一筆 scan 並明確設定 created_at 確保時間順序 */
+func seedScanWithTime(t *testing.T, q *sqlc.Queries, id, projectID, target string, createdAt time.Time) {
+	t.Helper()
+	_, err := q.CreateScan(context.Background(), sqlc.CreateScanParams{
+		ID:            id,
+		ProjectID:     projectID,
+		Target:        target,
+		ScanType:      "single",
+		Status:        "completed",
+		TriggerSource: "cli",
+	})
+	if err != nil {
+		t.Fatalf("建立測試 scan 失敗: %v", err)
+	}
+	if _, err := q.UpdateScanCreated(context.Background(), sqlc.UpdateScanCreatedParams{
+		ID: id, CreatedAt: createdAt,
+	}); err != nil {
+		t.Fatalf("更新 scan created_at 失敗: %v", err)
+	}
+}
+
+/* TestTrends GET /api/projects/{id}/trends 逐對比對算新增/修復 */
+func TestTrends(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+
+	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+
+	/* 兩次掃描 時間明確區隔 scan1 早於 scan2 */
+	seedScanWithTime(t, q, "s1", p.ID, "/tmp/a", time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC))
+	seedScanWithTime(t, q, "s2", p.ID, "/tmp/a", time.Date(2026, 7, 2, 10, 0, 0, 0, time.UTC))
+	run, _ := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
+		ID: "r1", ScanID: "s1", Engine: "fake", Category: "SAST", Status: "completed",
+	})
+
+	/* s1 觀察到 fa fb s2 觀察到 fa fc
+	   由 s1->s2 新增 fc 修復 fb 不變 fa */
+	seedFinding(t, q, "fa", p.ID, "s1", run.ID, "HIGH")
+	seedFinding(t, q, "fb", p.ID, "s1", run.ID, "MEDIUM")
+	seedFinding(t, q, "fc", p.ID, "s2", run.ID, "CRITICAL")
+	seedScanFinding(t, q, "s1", "fa", "hash-fa")
+	seedScanFinding(t, q, "s1", "fb", "hash-fb")
+	seedScanFinding(t, q, "s2", "fa", "hash-fa")
+	seedScanFinding(t, q, "s2", "fc", "hash-fc")
+
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/projects/"+p.ID+"/trends", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("trends 回應碼 %d body %s", rec.Code, rec.Body.String())
+	}
+
+	var body struct {
+		Points []struct {
+			ScanID   string `json:"scan_id"`
+			Added    int64  `json:"added"`
+			Resolved int64  `json:"resolved"`
+			Total    int64  `json:"total"`
+		} `json:"points"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("解析 trends 回應失敗: %v", err)
+	}
+
+	if len(body.Points) != 2 {
+		t.Fatalf("應有 2 個趨勢點 實際 %d", len(body.Points))
+	}
+
+	byScan := map[string]struct{ added, resolved, total int64 }{}
+	for _, pt := range body.Points {
+		byScan[pt.ScanID] = struct{ added, resolved, total int64 }{pt.Added, pt.Resolved, pt.Total}
+	}
+
+	/* 第一筆 s1 全部視為新增 resolved=0 */
+	if byScan["s1"].added != 2 || byScan["s1"].resolved != 0 {
+		t.Errorf("s1 趨勢錯誤 added 應 2 resolved 應 0 實際 %+v", byScan["s1"])
+	}
+	/* s2 相對 s1 新增 1 (fc) 修復 1 (fb) */
+	if byScan["s2"].added != 1 || byScan["s2"].resolved != 1 {
+		t.Errorf("s2 趨勢錯誤 added 應 1 resolved 應 1 實際 %+v", byScan["s2"])
+	}
+}
+
+/* TestTrendsProjectNotFound 不存在的 project 應回 404 */
+func TestTrendsProjectNotFound(t *testing.T) {
+	srv, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/projects/nope/trends", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("不存在的 project trends 應回 404 實際 %d", rec.Code)
+	}
+}
+
 /* webFakeScanner 為 web 觸發測試用的假引擎 */
 type webFakeScanner struct{}
 

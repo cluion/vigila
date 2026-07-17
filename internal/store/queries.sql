@@ -43,6 +43,9 @@ SELECT * FROM scans ORDER BY created_at DESC LIMIT ? OFFSET ?;
 -- name: ListScansByProject :many
 SELECT * FROM scans WHERE project_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?;
 
+-- name: ListProjectScansChronological :many
+SELECT * FROM scans WHERE project_id = ? ORDER BY created_at ASC;
+
 -- name: CreateScan :one
 INSERT INTO scans (id, project_id, target, scan_type, profile, status, trigger_source)
 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -55,6 +58,9 @@ UPDATE scans
       completed_at = COALESCE(?, completed_at)
 WHERE id = ?
 RETURNING *;
+
+-- name: UpdateScanCreated :one
+UPDATE scans SET created_at = ? WHERE id = ? RETURNING *;
 
 -- ============================================================================
 -- engine_runs
@@ -156,6 +162,12 @@ ORDER BY
 SELECT COUNT(*) FROM scan_findings a
 JOIN scan_findings b ON a.hash_code = b.hash_code
 WHERE a.scan_id = ?1 AND b.scan_id = ?2;
+
+-- name: CountFindingsOnlyInScan :one
+SELECT COUNT(*) FROM scan_findings sf
+WHERE sf.scan_id = ?1 AND NOT EXISTS (
+  SELECT 1 FROM scan_findings other WHERE other.scan_id = ?2 AND other.hash_code = sf.hash_code
+);
 
 -- ============================================================================
 -- stats

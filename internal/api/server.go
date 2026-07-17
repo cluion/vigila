@@ -53,6 +53,7 @@ func New(db *sql.DB) *Server {
 		r.Get("/findings/{id}", s.getFinding)
 		r.Patch("/findings/{id}", s.updateFindingStatus)
 		r.Get("/projects", s.listProjects)
+		r.Get("/projects/{id}/trends", s.trends)
 		r.Get("/stats", s.stats)
 		r.Get("/profiles", s.listProfiles)
 		r.Get("/engines", s.listEngines)

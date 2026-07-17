@@ -124,6 +124,25 @@ func (q *Queries) CountFindingsBySeverityByScan(ctx context.Context, scanID stri
 	return items, nil
 }
 
+const countFindingsOnlyInScan = `-- name: CountFindingsOnlyInScan :one
+SELECT COUNT(*) FROM scan_findings sf
+WHERE sf.scan_id = ?1 AND NOT EXISTS (
+  SELECT 1 FROM scan_findings other WHERE other.scan_id = ?2 AND other.hash_code = sf.hash_code
+)
+`
+
+type CountFindingsOnlyInScanParams struct {
+	ScanID   string `json:"scan_id"`
+	ScanID_2 string `json:"scan_id_2"`
+}
+
+func (q *Queries) CountFindingsOnlyInScan(ctx context.Context, arg CountFindingsOnlyInScanParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFindingsOnlyInScan, arg.ScanID, arg.ScanID_2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createEngineRun = `-- name: CreateEngineRun :one
 INSERT INTO engine_runs (
   id, scan_id, engine, category, command, status, exit_code, duration_ms,
@@ -653,6 +672,44 @@ func (q *Queries) ListFindingsOnlyInScan(ctx context.Context, arg ListFindingsOn
 	return items, nil
 }
 
+const listProjectScansChronological = `-- name: ListProjectScansChronological :many
+SELECT id, project_id, target, scan_type, profile, status, started_at, completed_at, trigger_source, created_at FROM scans WHERE project_id = ? ORDER BY created_at ASC
+`
+
+func (q *Queries) ListProjectScansChronological(ctx context.Context, projectID string) ([]Scan, error) {
+	rows, err := q.db.QueryContext(ctx, listProjectScansChronological, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Scan
+	for rows.Next() {
+		var i Scan
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Target,
+			&i.ScanType,
+			&i.Profile,
+			&i.Status,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.TriggerSource,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjects = `-- name: ListProjects :many
 SELECT id, name, description, created_at, updated_at FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?
 `
@@ -865,6 +922,33 @@ func (q *Queries) UpdateFindingStatus(ctx context.Context, arg UpdateFindingStat
 		&i.UniqueIDFromTool,
 		&i.HashCode,
 		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateScanCreated = `-- name: UpdateScanCreated :one
+UPDATE scans SET created_at = ? WHERE id = ? RETURNING id, project_id, target, scan_type, profile, status, started_at, completed_at, trigger_source, created_at
+`
+
+type UpdateScanCreatedParams struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+}
+
+func (q *Queries) UpdateScanCreated(ctx context.Context, arg UpdateScanCreatedParams) (Scan, error) {
+	row := q.db.QueryRowContext(ctx, updateScanCreated, arg.CreatedAt, arg.ID)
+	var i Scan
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Target,
+		&i.ScanType,
+		&i.Profile,
+		&i.Status,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.TriggerSource,
 		&i.CreatedAt,
 	)
 	return i, err

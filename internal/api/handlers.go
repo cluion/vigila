@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -58,7 +59,7 @@ func (s *Server) getScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dto := scanDetailDTO{Scan: scan}
+	dto := scanDetailDTO{Scan: scan, EngineRuns: []sqlc.EngineRun{}}
 	if p, err := s.q.GetProject(ctx, scan.ProjectID); err == nil {
 		dto.ProjectName = p.Name
 	}
@@ -79,6 +80,10 @@ func (s *Server) listScanFindings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "查詢 findings 失敗")
 		return
 	}
+	/* 確保空切片序列化為 [] 而非 null 避免 frontend .map 失敗 */
+	if findings == nil {
+		findings = []sqlc.Finding{}
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"scan_id":  id,
@@ -96,6 +101,9 @@ func (s *Server) listScanRuns(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "查詢 engine_runs 失敗")
 		return
+	}
+	if runs == nil {
+		runs = []sqlc.EngineRun{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -200,6 +208,9 @@ func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "查詢 projects 失敗")
 		return
 	}
+	if projects == nil {
+		projects = []sqlc.Project{}
+	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"projects": projects,
@@ -251,6 +262,76 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"recent_scans": stats,
+	})
+}
+
+/*
+trends GET /api/projects/{id}/trends
+
+	逐對比對同專案的連續掃描 以 scan_findings 事件表算出每次掃描的新增/修復數
+
+	resolved 採代理定義 DB 無 resolved_at 時間戳 故以 hash 在前次掃描存在
+	本次消失作為修復 與 rule 不再觸發無法區分
+*/
+func (s *Server) trends(w http.ResponseWriter, r *http.Request) {
+	ctx := ensureCtx(r)
+	projectID := chi.URLParam(r, "id")
+
+	/* 確認專案存在 */
+	if _, err := s.q.GetProject(ctx, projectID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "project 不存在")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "查詢 project 失敗")
+		return
+	}
+
+	/* 同專案掃描依時間正序 */
+	scans, err := s.q.ListProjectScansChronological(ctx, projectID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "查詢 scans 失敗")
+		return
+	}
+
+	type trendPoint struct {
+		ScanID    string    `json:"scan_id"`
+		CreatedAt time.Time `json:"created_at"`
+		Added     int64     `json:"added"`
+		Resolved  int64     `json:"resolved"`
+		Total     int64     `json:"total"`
+	}
+
+	points := make([]trendPoint, 0, len(scans))
+	for i, sc := range scans {
+		/* 該次掃描歸屬的 findings 總數 */
+		total, _ := s.q.CountFindingsByScan(ctx, sc.ID)
+
+		pt := trendPoint{
+			ScanID:    sc.ID,
+			CreatedAt: sc.CreatedAt,
+			Total:     total,
+		}
+
+		/* 第一筆掃描 無前次可比 全部視為新增 */
+		if i == 0 {
+			pt.Added = total
+		} else {
+			prev := scans[i-1].ID
+			/* 新增 = 本次有 前次沒有 */
+			pt.Added, _ = s.q.CountFindingsOnlyInScan(ctx, sqlc.CountFindingsOnlyInScanParams{
+				ScanID: sc.ID, ScanID_2: prev,
+			})
+			/* 修復 = 前次有 本次沒有 */
+			pt.Resolved, _ = s.q.CountFindingsOnlyInScan(ctx, sqlc.CountFindingsOnlyInScanParams{
+				ScanID: prev, ScanID_2: sc.ID,
+			})
+		}
+		points = append(points, pt)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"points": points,
 	})
 }
 

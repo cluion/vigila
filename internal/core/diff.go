@@ -63,6 +63,14 @@ func Diff(ctx context.Context, q *sqlc.Queries, fromID, toID string) (*DiffResul
 		return nil, fmt.Errorf("查詢共同 findings 失敗: %w", err)
 	}
 
+	/* 確保空切片序列化為 [] 而非 null 避免 frontend .map 失敗 */
+	if added == nil {
+		added = []sqlc.Finding{}
+	}
+	if removed == nil {
+		removed = []sqlc.Finding{}
+	}
+
 	return &DiffResult{
 		From:      from,
 		To:        to,

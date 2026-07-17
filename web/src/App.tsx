@@ -3,6 +3,7 @@ import { useHashRoute } from "@/hooks/useHashRoute";
 import { ThemeProvider } from "@/lib/theme";
 import { ScanListPage } from "@/pages/ScanListPage";
 import { ScanDetailPage } from "@/pages/ScanDetailPage";
+import { EnginesPage } from "@/pages/EnginesPage";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,23 @@ function AppInner() {
   }, []);
 
   const scanMatch = route.match(/^\/scans\/(.+)$/);
+  const isEngines = route === "/engines";
+  /* 掃描列表與掃描詳情都歸在「掃描」分頁下 */
+  const activeNav = isEngines ? "engines" : "scans";
 
   return (
     <div className="mx-auto max-w-[1200px] p-6">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">Vigila</h1>
-          <span className="text-[13px] text-muted-foreground">資安掃描編排平台</span>
+          <nav className="flex items-center gap-1">
+            <NavLink label="掃描" active={activeNav === "scans"} onClick={() => navigate("/")} />
+            <NavLink
+              label="引擎"
+              active={activeNav === "engines"}
+              onClick={() => navigate("/engines")}
+            />
+          </nav>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -47,7 +58,9 @@ function AppInner() {
         </div>
       </div>
 
-      {scanMatch ? (
+      {isEngines ? (
+        <EnginesPage />
+      ) : scanMatch ? (
         <ScanDetailPage
           scanId={scanMatch[1]}
           onBack={() => navigate("/")}
@@ -64,6 +77,31 @@ function AppInner() {
         onTriggerScan={() => navigate("/")}
       />
     </div>
+  );
+}
+
+/* NavLink 頂部導航連結 active 時高亮 */
+function NavLink({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+        (active
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:text-foreground")
+      }
+    >
+      {label}
+    </button>
   );
 }
 

@@ -111,6 +111,13 @@ export interface Trends {
   points: TrendPoint[];
 }
 
+export interface Engine {
+  name: string;
+  category: string;
+  target_kinds: string[];
+  installed: boolean;
+}
+
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
@@ -142,7 +149,7 @@ export const api = {
     return res.json();
   },
   listProfiles: (): Promise<{ profiles: string }> => getJSON("/profiles"),
-  listEngines: (): Promise<{ engines: { name: string; category: string }[] }> => getJSON("/engines"),
+  listEngines: (): Promise<{ engines: Engine[] }> => getJSON("/engines"),
 };
 
 /* SSE 事件訂閱 回傳 cleanup 函數 */

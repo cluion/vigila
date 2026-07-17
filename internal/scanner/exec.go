@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -17,7 +16,8 @@ import (
 */
 func DefaultRun(ctx context.Context, binary string, args []string) (*Result, error) {
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, binary, args...)
+	/* managed 優先解析實際執行路徑 Command 仍記原名保持顯示乾淨 */
+	cmd := exec.CommandContext(ctx, ResolveBinary(binary), args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -44,13 +44,4 @@ func exitCode(err error) int {
 		return exitErr.ExitCode()
 	}
 	return -1
-}
-
-/* CheckBinary 確認 binary 已安裝 執行 <binary> --version */
-func CheckBinary(binary string) error {
-	_, err := exec.LookPath(binary)
-	if err != nil {
-		return fmt.Errorf("找不到 %s 請先安裝或加入 PATH", binary)
-	}
-	return nil
 }

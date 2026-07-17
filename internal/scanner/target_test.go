@@ -24,6 +24,9 @@ func (f *fakeScanner) CheckInstalled() error    { return nil }
 func (f *fakeScanner) TargetKinds() []TargetKind {
 	return f.kinds
 }
+func (f *fakeScanner) InstallHint() InstallHint {
+	return InstallHint{DocsURL: "https://example.com", Command: "install " + f.name}
+}
 func (f *fakeScanner) BuildCommand(string, Options) (string, []string) { return f.name, nil }
 func (f *fakeScanner) Run(context.Context, string, Options) (*Result, error) {
 	return &Result{}, nil

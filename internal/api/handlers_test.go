@@ -395,6 +395,9 @@ func (f *webFakeScanner) Binary() string           { return "fake-web" }
 func (f *webFakeScanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
+func (f *webFakeScanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install fake-web"}
+}
 func (f *webFakeScanner) CheckInstalled() error            { return nil }
 func (f *webFakeScanner) ExitCodeIsFindings(code int) bool { return code == 1 }
 func (f *webFakeScanner) BuildCommand(target string, opts scanner.Options) (string, []string) {

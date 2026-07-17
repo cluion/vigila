@@ -22,8 +22,11 @@ func (e *engineStub) Name() string                      { return e.name }
 func (e *engineStub) Category() model.Category          { return e.cat }
 func (e *engineStub) Binary() string                    { return e.name }
 func (e *engineStub) TargetKinds() []scanner.TargetKind { return e.kinds }
-func (e *engineStub) CheckInstalled() error             { return e.checkErr }
-func (e *engineStub) ExitCodeIsFindings(code int) bool  { return false }
+func (e *engineStub) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install " + e.name}
+}
+func (e *engineStub) CheckInstalled() error            { return e.checkErr }
+func (e *engineStub) ExitCodeIsFindings(code int) bool { return false }
 func (e *engineStub) Parse([]byte) ([]model.Finding, error) {
 	return nil, nil
 }
@@ -32,6 +35,24 @@ func (e *engineStub) BuildCommand(string, scanner.Options) (string, []string) {
 }
 func (e *engineStub) Run(context.Context, string, scanner.Options) (*scanner.Result, error) {
 	return &scanner.Result{}, nil
+}
+
+/*
+	TestEveryAdapterHasInstallHint 每個真實 adapter 都必須提供安裝指引
+
+面板要引導使用者安裝未裝的引擎 少填任何一個都會讓面板出現空白指引
+本測試靠 blank import 觸發全部 adapter 註冊 見 scan_test.go
+*/
+func TestEveryAdapterHasInstallHint(t *testing.T) {
+	for _, s := range scanner.All() {
+		hint := s.InstallHint()
+		if hint.DocsURL == "" {
+			t.Errorf("引擎 %s 的 InstallHint.DocsURL 不可為空", s.Name())
+		}
+		if hint.Command == "" {
+			t.Errorf("引擎 %s 的 InstallHint.Command 不可為空", s.Name())
+		}
+	}
 }
 
 func TestCollectEngineRowsSortedByName(t *testing.T) {

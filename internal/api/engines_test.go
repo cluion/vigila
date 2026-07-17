@@ -23,8 +23,11 @@ func (e *infoStub) Name() string                      { return e.name }
 func (e *infoStub) Category() model.Category          { return e.cat }
 func (e *infoStub) Binary() string                    { return e.name }
 func (e *infoStub) TargetKinds() []scanner.TargetKind { return e.kinds }
-func (e *infoStub) CheckInstalled() error             { return e.checkErr }
-func (e *infoStub) ExitCodeIsFindings(int) bool       { return false }
+func (e *infoStub) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install " + e.name}
+}
+func (e *infoStub) CheckInstalled() error       { return e.checkErr }
+func (e *infoStub) ExitCodeIsFindings(int) bool { return false }
 func (e *infoStub) Parse([]byte) ([]model.Finding, error) {
 	return nil, nil
 }
@@ -74,24 +77,24 @@ func TestListEnginesResponseShape(t *testing.T) {
 		t.Fatalf("/api/engines 回應碼 %d", rec.Code)
 	}
 
+	type engineJSON struct {
+		Name        string   `json:"name"`
+		Category    string   `json:"category"`
+		TargetKinds []string `json:"target_kinds"`
+		Installed   bool     `json:"installed"`
+		InstallHint struct {
+			DocsURL string `json:"docs_url"`
+			Command string `json:"command"`
+		} `json:"install_hint"`
+	}
 	var body struct {
-		Engines []struct {
-			Name        string   `json:"name"`
-			Category    string   `json:"category"`
-			TargetKinds []string `json:"target_kinds"`
-			Installed   bool     `json:"installed"`
-		} `json:"engines"`
+		Engines []engineJSON `json:"engines"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("解析 engines 回應失敗: %v", err)
 	}
 
-	var probe *struct {
-		Name        string   `json:"name"`
-		Category    string   `json:"category"`
-		TargetKinds []string `json:"target_kinds"`
-		Installed   bool     `json:"installed"`
-	}
+	var probe *engineJSON
 	for i := range body.Engines {
 		if body.Engines[i].Name == "shape-probe" {
 			probe = &body.Engines[i]
@@ -108,6 +111,9 @@ func TestListEnginesResponseShape(t *testing.T) {
 	}
 	if probe.Installed {
 		t.Error("shape-probe checkErr 非 nil 應為未安裝")
+	}
+	if probe.InstallHint.DocsURL == "" || probe.InstallHint.Command == "" {
+		t.Errorf("shape-probe 應含安裝指引 實際 %+v", probe.InstallHint)
 	}
 }
 

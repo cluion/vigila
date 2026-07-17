@@ -44,6 +44,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
 
+/* InstallHint gitleaks 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://github.com/gitleaks/gitleaks#installing",
+		Command: "brew install gitleaks",
+	}
+}
+
 /* CheckInstalled 確認 gitleaks 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

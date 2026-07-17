@@ -9,6 +9,12 @@ import (
 	"github.com/cluion/vigila/internal/core/model"
 )
 
+/* InstallHint 引導使用者安裝引擎 供面板顯示 */
+type InstallHint struct {
+	DocsURL string // 官方安裝文件連結
+	Command string // 一行最通用的安裝指令
+}
+
 /* Options 傳給 Scanner 的掃描選項 */
 type Options struct {
 	Config    string   // 規則集設定
@@ -30,6 +36,7 @@ type Scanner interface {
 	Category() model.Category
 	Binary() string
 	TargetKinds() []TargetKind
+	InstallHint() InstallHint
 	CheckInstalled() error
 	BuildCommand(target string, opts Options) (binary string, args []string)
 	Run(ctx context.Context, target string, opts Options) (*Result, error)

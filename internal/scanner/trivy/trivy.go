@@ -27,6 +27,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
 
+/* InstallHint trivy 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://trivy.dev/latest/getting-started/installation/",
+		Command: "brew install trivy",
+	}
+}
+
 /* CheckInstalled 確認 trivy 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

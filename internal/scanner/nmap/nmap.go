@@ -36,6 +36,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetHost}
 }
 
+/* InstallHint nmap 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://nmap.org/download.html",
+		Command: "brew install nmap",
+	}
+}
+
 /* CheckInstalled 確認 nmap 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

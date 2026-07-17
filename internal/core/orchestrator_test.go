@@ -27,6 +27,9 @@ func (f *fakeScanner) Binary() string           { return f.name }
 func (f *fakeScanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
+func (f *fakeScanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install " + f.name}
+}
 func (f *fakeScanner) CheckInstalled() error            { return f.checkErr }
 func (f *fakeScanner) ExitCodeIsFindings(code int) bool { return code == 1 }
 

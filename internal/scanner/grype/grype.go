@@ -32,6 +32,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
 
+/* InstallHint grype 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://github.com/anchore/grype#installation",
+		Command: "brew install grype",
+	}
+}
+
 /* CheckInstalled 確認 grype 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

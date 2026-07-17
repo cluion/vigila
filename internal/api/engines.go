@@ -6,12 +6,19 @@ import (
 	"github.com/cluion/vigila/internal/scanner"
 )
 
-/* engineInfo 為引擎面板的一項 含類別 可接受目標型態與安裝狀態 */
+/* installHint 為引擎安裝指引的 JSON 形狀 */
+type installHint struct {
+	DocsURL string `json:"docs_url"`
+	Command string `json:"command"`
+}
+
+/* engineInfo 為引擎面板的一項 含類別 可接受目標型態 安裝狀態與安裝指引 */
 type engineInfo struct {
-	Name        string   `json:"name"`
-	Category    string   `json:"category"`
-	TargetKinds []string `json:"target_kinds"`
-	Installed   bool     `json:"installed"`
+	Name        string      `json:"name"`
+	Category    string      `json:"category"`
+	TargetKinds []string    `json:"target_kinds"`
+	Installed   bool        `json:"installed"`
+	InstallHint installHint `json:"install_hint"`
 }
 
 /*
@@ -27,11 +34,13 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 		for _, k := range kinds {
 			ks = append(ks, string(k))
 		}
+		hint := e.InstallHint()
 		infos = append(infos, engineInfo{
 			Name:        e.Name(),
 			Category:    string(e.Category()),
 			TargetKinds: ks,
 			Installed:   e.CheckInstalled() == nil,
+			InstallHint: installHint{DocsURL: hint.DocsURL, Command: hint.Command},
 		})
 	}
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })

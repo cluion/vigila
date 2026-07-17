@@ -39,6 +39,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }
 
+/* InstallHint trufflehog 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://github.com/trufflesecurity/trufflehog#floppy_disk-installation",
+		Command: "brew install trufflehog",
+	}
+}
+
 /* CheckInstalled 確認 trufflehog 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

@@ -36,6 +36,14 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetURL}
 }
 
+/* InstallHint nuclei 安裝指引 */
+func (s *Scanner) InstallHint() scanner.InstallHint {
+	return scanner.InstallHint{
+		DocsURL: "https://docs.projectdiscovery.io/tools/nuclei/install",
+		Command: "brew install nuclei",
+	}
+}
+
 /* CheckInstalled 確認 nuclei 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

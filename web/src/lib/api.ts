@@ -116,6 +116,10 @@ export interface Engine {
   category: string;
   target_kinds: string[];
   installed: boolean;
+  install_hint: {
+    docs_url: string;
+    command: string;
+  };
 }
 
 export const api = {

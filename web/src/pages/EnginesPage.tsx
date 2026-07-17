@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Engine } from "@/lib/api";
 import { EngineBadge } from "@/components/badges";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,6 +10,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+/* CopyButton 複製安裝指令 複製後短暫顯示打勾 */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard 不可用時忽略 */
+    }
+  };
+  return (
+    <button
+      onClick={copy}
+      className="text-muted-foreground hover:text-foreground"
+      title="複製"
+    >
+      {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+    </button>
+  );
+}
 
 /* 引擎面板 唯讀顯示已註冊引擎的類別 可接受目標型態與安裝狀態 */
 export function EnginesPage() {
@@ -70,10 +94,27 @@ export function EnginesPage() {
                       已安裝
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
-                      <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-                      未安裝
-                    </span>
+                    <div className="space-y-1.5">
+                      <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
+                        <span className="size-1.5 rounded-full bg-muted-foreground/50" />
+                        未安裝
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                          {e.install_hint.command}
+                        </code>
+                        <CopyButton text={e.install_hint.command} />
+                        <a
+                          href={e.install_hint.docs_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-xs text-indigo hover:underline"
+                        >
+                          文件
+                          <ExternalLink className="size-3" />
+                        </a>
+                      </div>
+                    </div>
                   )}
                 </TableCell>
               </TableRow>

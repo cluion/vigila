@@ -21,9 +21,12 @@ type fakeScanner struct {
 	ran      bool
 }
 
-func (f *fakeScanner) Name() string                     { return f.name }
-func (f *fakeScanner) Category() model.Category         { return model.CategorySAST }
-func (f *fakeScanner) Binary() string                   { return f.name }
+func (f *fakeScanner) Name() string             { return f.name }
+func (f *fakeScanner) Category() model.Category { return model.CategorySAST }
+func (f *fakeScanner) Binary() string           { return f.name }
+func (f *fakeScanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetPath}
+}
 func (f *fakeScanner) CheckInstalled() error            { return f.checkErr }
 func (f *fakeScanner) ExitCodeIsFindings(code int) bool { return code == 1 }
 

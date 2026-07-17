@@ -31,6 +31,11 @@ func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategoryDAST }
 func (s *Scanner) Binary() string           { return binaryName }
 
+/* TargetKinds nuclei 以 -u 指定完整網址 只吃 URL */
+func (s *Scanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetURL}
+}
+
 /* CheckInstalled 確認 nuclei 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

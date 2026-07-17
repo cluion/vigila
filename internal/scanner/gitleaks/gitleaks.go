@@ -39,6 +39,11 @@ func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySecret }
 func (s *Scanner) Binary() string           { return binaryName }
 
+/* TargetKinds gitleaks 掃描本機目錄或 git repo 只吃路徑 */
+func (s *Scanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetPath}
+}
+
 /* CheckInstalled 確認 gitleaks 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

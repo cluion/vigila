@@ -31,6 +31,11 @@ func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategoryVA }
 func (s *Scanner) Binary() string           { return binaryName }
 
+/* TargetKinds nmap 掃描網路主機 只吃 host IP 或 host:port */
+func (s *Scanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetHost}
+}
+
 /* CheckInstalled 確認 nmap 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

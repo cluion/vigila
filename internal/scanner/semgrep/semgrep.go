@@ -25,6 +25,11 @@ func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySAST }
 func (s *Scanner) Binary() string           { return binaryName }
 
+/* TargetKinds semgrep 掃描原始碼 只吃本機路徑 */
+func (s *Scanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetPath}
+}
+
 /* CheckInstalled 確認 semgrep 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

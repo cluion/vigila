@@ -389,9 +389,12 @@ func TestTrendsProjectNotFound(t *testing.T) {
 /* webFakeScanner 為 web 觸發測試用的假引擎 */
 type webFakeScanner struct{}
 
-func (f *webFakeScanner) Name() string                     { return "fake-web" }
-func (f *webFakeScanner) Category() model.Category         { return model.CategorySAST }
-func (f *webFakeScanner) Binary() string                   { return "fake-web" }
+func (f *webFakeScanner) Name() string             { return "fake-web" }
+func (f *webFakeScanner) Category() model.Category { return model.CategorySAST }
+func (f *webFakeScanner) Binary() string           { return "fake-web" }
+func (f *webFakeScanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetPath}
+}
 func (f *webFakeScanner) CheckInstalled() error            { return nil }
 func (f *webFakeScanner) ExitCodeIsFindings(code int) bool { return code == 1 }
 func (f *webFakeScanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
@@ -401,6 +404,51 @@ func (f *webFakeScanner) Run(ctx context.Context, target string, opts scanner.Op
 	return &scanner.Result{RawOutput: []byte("{}")}, nil
 }
 func (f *webFakeScanner) Parse(raw []byte) ([]model.Finding, error) { return nil, nil }
+
+/* postScan 對 /api/scans 發 POST 回傳 recorder */
+func postScan(t *testing.T, srv *Server, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/scans", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	return rec
+}
+
+/*
+	TestStartScanRejectsIncompatibleEngine 明確指定的引擎不吃該目標型態時應回 400
+
+fake-web 只吃路徑 對 URL 目標必然失敗 應在啟動前擋下 不建立 scan 紀錄
+*/
+func TestStartScanRejectsIncompatibleEngine(t *testing.T) {
+	ctx := context.Background()
+	srv, q := newTestServer(t)
+	scanner.Register(&webFakeScanner{})
+
+	rec := postScan(t, srv, `{"target": "https://example.com", "engine": "fake-web"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("不相容的引擎應回 400 實際 %d body %s", rec.Code, rec.Body.String())
+	}
+
+	scans, err := q.ListScans(ctx, sqlc.ListScansParams{Limit: 10, Offset: 0})
+	if err != nil {
+		t.Fatalf("查詢 scans 失敗: %v", err)
+	}
+	if len(scans) != 0 {
+		t.Errorf("被擋下的請求不應建立 scan 紀錄 實際建立 %d 筆", len(scans))
+	}
+}
+
+/* TestStartScanRejectsTargetWithNoEngine all 模式下沒有引擎支援該目標時應回 400 */
+func TestStartScanRejectsTargetWithNoEngine(t *testing.T) {
+	srv, _ := newTestServer(t)
+	scanner.Register(&webFakeScanner{})
+
+	/* api 測試的 registry 只有吃路徑的 fake-web 沒有 DAST 引擎 */
+	rec := postScan(t, srv, `{"target": "https://example.com", "engine": "all"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("沒有引擎支援此目標時應回 400 實際 %d body %s", rec.Code, rec.Body.String())
+	}
+}
 
 /* TestStartScanRecordsWebTriggerSource 網頁觸發的掃描 trigger_source 應記為 web */
 func TestStartScanRecordsWebTriggerSource(t *testing.T) {

@@ -30,8 +30,10 @@ make build
 # 單一引擎掃描
 vigila scan ./myapp --engine semgrep
 
-# 全引擎掃描
-vigila scan ./myapp --engine all
+# 全引擎掃描 依目標型態自動選用適用的引擎
+vigila scan ./myapp --engine all              # 路徑 SAST SCA Secret
+vigila scan https://example.com --engine all  # URL  DAST
+vigila scan scanme.nmap.org --engine all      # 主機 VA
 
 # profile 流程掃描
 vigila scan ./myapp --profile code-audit
@@ -65,8 +67,29 @@ vigila diff <scan-id-1> <scan-id-2>
 ### 掃描模式
 
 - `--engine <name>` 單一引擎
-- `--engine all` 全部已註冊引擎
+- `--engine all` 全部適用此目標的引擎
 - `--profile <name>` 預定義流程
+
+### 目標型態
+
+每個引擎宣告自己接受的目標型態 vigila 依此決定 `--engine all` 要跑哪些引擎
+
+| 目標型態 | 範例 | 適用引擎 |
+|---------|------|---------|
+| 路徑 | `./myapp` `/tmp/repo` | semgrep trivy grype gitleaks trufflehog |
+| URL | `https://example.com` | nuclei |
+| 主機 | `scanme.nmap.org` `10.0.0.1:443` | nmap |
+
+型態由目標字串推導 含 scheme 視為 URL 本機存在的路徑視為路徑 可解析為 IP 或網域名視為主機
+
+明確指定不相容的引擎會直接報錯 不會留下註定失敗的掃描紀錄
+
+```bash
+$ vigila scan ./myapp --engine nmap
+Error: 引擎 nmap 不支援此目標
+  目標 ./myapp 判定為 path
+  nmap 接受的目標型態: host
+```
 
 內建 profile
 
@@ -76,7 +99,7 @@ vigila diff <scan-id-1> <scan-id-2>
 | sca-only | trivy | 僅依賴掃描 |
 | secret-only | gitleaks | 僅密鑰掃描 |
 | code-audit | semgrep + gitleaks | 程式碼資安審計 |
-| full | semgrep + trivy + gitleaks | SAST SCA Secret 全引擎 |
+| full | semgrep + trivy + gitleaks | 原始碼全類型 SAST SCA Secret |
 | dast-only | nuclei | 網頁動態掃描 target 為 URL |
 | va-only | nmap | 網路服務弱點評估 target 為 host 或 IP |
 

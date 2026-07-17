@@ -27,6 +27,11 @@ func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySCA }
 func (s *Scanner) Binary() string           { return binaryName }
 
+/* TargetKinds 目前以 dir: 前綴掃描本機路徑 未來若支援 image 再擴充 */
+func (s *Scanner) TargetKinds() []scanner.TargetKind {
+	return []scanner.TargetKind{scanner.TargetPath}
+}
+
 /* CheckInstalled 確認 grype 已安裝 */
 func (s *Scanner) CheckInstalled() error {
 	return scanner.CheckBinary(binaryName)

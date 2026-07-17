@@ -368,11 +368,17 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 			return orch.RunProfile(ctx, req.Profile, req.Target, scanner.Options{})
 		}
 	case req.Engine == "all" || req.Engine == "":
+		/* 依目標型態過濾引擎 與 CLI 共用同一份判斷 見 ADR-011 */
+		scanners, err := scanner.AllForTarget(req.Target)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		run = func() (*core.ScanResult, error) {
-			return orch.RunMultiple(ctx, scanner.All(), req.Target, scanner.Options{})
+			return orch.RunMultiple(ctx, scanners, req.Target, scanner.Options{})
 		}
 	default:
-		sc, err := scanner.Get(req.Engine)
+		sc, err := scanner.GetForTarget(req.Engine, req.Target)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return

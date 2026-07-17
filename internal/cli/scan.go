@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -20,29 +21,39 @@ import (
 支援三種模式
 
 	--engine <name>   單一引擎
-	--engine all      全部已註冊引擎
+	--engine all      全部適用此目標的引擎
 	--profile <name>  預定義流程 引擎組合與順序
+
+target 型態決定可用的引擎 路徑走 SAST SCA Secret
+URL 走 DAST host 或 IP 走 VA 詳見 scanner.DetectTargetKind
 */
 func NewScanCmd() *cobra.Command {
 	var engineName string
 	var profileName string
 
 	cmd := &cobra.Command{
-		Use:   "scan <path>",
+		Use:   "scan <target>",
 		Short: "執行資安掃描",
 		Long: `執行單一或多引擎掃描 結果寫入資料庫 可由 vigila serve 檢視
 
 掃描模式
   --engine semgrep      單一引擎
-  --engine all          全部已註冊引擎
+  --engine all          全部適用此目標的引擎
   --profile full        預定義流程
+
+目標型態決定可用的引擎
+  路徑    ./myapp              SAST SCA Secret 引擎
+  URL     https://example.com  DAST 引擎
+  主機    scanme.nmap.org      VA 引擎
 
 內建 profile
   sast-only     僅 SAST semgrep
   sca-only      僅 SCA trivy
   secret-only   僅 Secret gitleaks
   code-audit    SAST 加 Secret
-  full          全引擎`,
+  full          原始碼全類型 SAST SCA Secret
+  dast-only     僅 DAST nuclei
+  va-only       僅 VA nmap`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
@@ -68,10 +79,14 @@ func NewScanCmd() *cobra.Command {
 				return nil
 			}
 
-			/* all 模式 執行全部已註冊引擎 */
+			/* all 模式 執行全部適用此目標的引擎 */
 			if engineName == "all" {
-				fmt.Fprintf(out, "正在以全部引擎掃描 %s ...\n", target)
-				result, err := orch.RunMultiple(ctx, scanner.All(), target, scanner.Options{})
+				scanners, err := scanner.AllForTarget(target)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(out, "正在以 %s 掃描 %s ...\n", joinNames(scanners), target)
+				result, err := orch.RunMultiple(ctx, scanners, target, scanner.Options{})
 				if err != nil {
 					return fmt.Errorf("掃描失敗: %w", err)
 				}
@@ -80,7 +95,7 @@ func NewScanCmd() *cobra.Command {
 			}
 
 			/* 單一引擎 */
-			s, err := scanner.Get(engineName)
+			s, err := scanner.GetForTarget(engineName, target)
 			if err != nil {
 				return err
 			}
@@ -94,9 +109,19 @@ func NewScanCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&engineName, "engine", "e", "semgrep", "掃描引擎 semgrep trivy gitleaks all")
+	cmd.Flags().StringVarP(&engineName, "engine", "e", "semgrep",
+		fmt.Sprintf("掃描引擎 %s 或 all", scanner.Names()))
 	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "掃描流程 profile 名稱")
 	return cmd
+}
+
+/* joinNames 組出引擎名稱清單供訊息顯示 */
+func joinNames(scanners []scanner.Scanner) string {
+	names := make([]string, 0, len(scanners))
+	for _, s := range scanners {
+		names = append(names, s.Name())
+	}
+	return strings.Join(names, " ")
 }
 
 /* printSummary 印出掃描結果的嚴重度與引擎統計 */

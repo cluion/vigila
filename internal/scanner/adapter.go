@@ -29,6 +29,7 @@ type Scanner interface {
 	Name() string
 	Category() model.Category
 	Binary() string
+	TargetKinds() []TargetKind
 	CheckInstalled() error
 	BuildCommand(target string, opts Options) (binary string, args []string)
 	Run(ctx context.Context, target string, opts Options) (*Result, error)

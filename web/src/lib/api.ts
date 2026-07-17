@@ -61,6 +61,10 @@ export interface Finding {
   installed_version: string | null;
   fixed_version: string | null;
   secret_type: string | null;
+  url: string | null;
+  host: string | null;
+  port: string | null;
+  method: string | null;
   unique_id_from_tool: string | null;
   status: string;
 }

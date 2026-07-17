@@ -47,6 +47,10 @@ type Finding struct {
 	InstalledVersion *string   `json:"installed_version"`
 	FixedVersion     *string   `json:"fixed_version"`
 	SecretType       *string   `json:"secret_type"`
+	Url              *string   `json:"url"`
+	Host             *string   `json:"host"`
+	Port             *string   `json:"port"`
+	Method           *string   `json:"method"`
 	ReferencesJson   *string   `json:"references_json"`
 	UniqueIDFromTool *string   `json:"unique_id_from_tool"`
 	HashCode         string    `json:"hash_code"`

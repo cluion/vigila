@@ -53,6 +53,13 @@ type Finding struct {
 	InstalledVersion string   `json:"installed_version,omitempty"`
 	FixedVersion     string   `json:"fixed_version,omitempty"`
 	SecretType       string   `json:"secret_type,omitempty"`
+
+	/* DAST / VA specific */
+	URL    string `json:"url,omitempty"`    /* 完整請求 URL 如 https://host/path */
+	Host   string `json:"host,omitempty"`   /* 主機名或 IP */
+	Port   string `json:"port,omitempty"`   /* 連接埠 */
+	Method string `json:"method,omitempty"` /* HTTP 方法 GET POST 等 */
+
 	References       []string `json:"references,omitempty"`
 	UniqueIDFromTool string   `json:"unique_id_from_tool,omitempty"`
 	HashCode         string   `json:"hash_code"`

@@ -98,6 +98,12 @@ CREATE TABLE IF NOT EXISTS findings (
   -- Secret specific
   secret_type         TEXT,
 
+  -- DAST / VA specific
+  url                 TEXT,             -- 完整請求 URL
+  host                TEXT,             -- 主機名或 IP
+  port                TEXT,             -- 連接埠
+  method              TEXT,             -- HTTP 方法
+
   -- references
   references_json     TEXT,             -- JSON array of URLs
 

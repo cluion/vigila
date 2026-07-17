@@ -60,7 +60,7 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
         <Input
           type="text"
           className="min-w-[200px] flex-1"
-          placeholder="掃描目標路徑 如 /tmp/myapp"
+          placeholder="掃描目標 路徑 URL 或 host 如 /tmp/myapp http://host 192.168.1.10"
           value={scanTarget}
           onChange={(e) => setScanTarget(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && triggerScan()}

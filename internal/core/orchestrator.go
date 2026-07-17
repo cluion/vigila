@@ -8,7 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cluion/vigila/internal/core/model"
@@ -129,10 +131,7 @@ type scanContext struct {
 
 /* beginScan 建立 project 與 scan 回傳上下文 profileName 非空時記錄於 scan */
 func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType string, profileName string, failFast bool) (*scanContext, error) {
-	projectName := filepath.Base(target)
-	if projectName == "." || projectName == "" {
-		projectName = "default"
-	}
+	projectName := deriveProjectName(target)
 	projectID := ulid.Make().String()
 	project, err := o.q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{
 		ID:   projectID,
@@ -393,6 +392,18 @@ func toUpsertParams(f model.Finding, projectID, scanID, engineRunID string) sqlc
 	if f.SecretType != "" {
 		p.SecretType = &f.SecretType
 	}
+	if f.URL != "" {
+		p.Url = &f.URL
+	}
+	if f.Host != "" {
+		p.Host = &f.Host
+	}
+	if f.Port != "" {
+		p.Port = &f.Port
+	}
+	if f.Method != "" {
+		p.Method = &f.Method
+	}
 	if f.UniqueIDFromTool != "" {
 		p.UniqueIDFromTool = &f.UniqueIDFromTool
 	}
@@ -411,4 +422,31 @@ func int64Ptr(v int64) *int64 {
 		return nil
 	}
 	return &v
+}
+
+/*
+	deriveProjectName 從 target 推導 project 名稱
+
+路徑目標取檔名 如 /tmp/myapp → myapp
+URL 目標取 host 如 http://host/path → host
+純 host/IP 直接使用 如 192.168.1.10 → 192.168.1.10
+*/
+func deriveProjectName(target string) string {
+	/* 含 scheme 視為 URL 取 host */
+	if strings.Contains(target, "://") {
+		if u, err := url.Parse(target); err == nil && u.Host != "" {
+			return u.Host
+		}
+	}
+
+	/* 含連接埠的 host/IP 直接使用 如 scanme.nmap.org:8080 或 192.168.1.10 */
+	if strings.Contains(target, ":") && !strings.ContainsAny(target, "/\\") {
+		return target
+	}
+
+	name := filepath.Base(target)
+	if name == "." || name == "" || name == "/" {
+		return "default"
+	}
+	return name
 }

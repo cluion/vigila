@@ -118,13 +118,17 @@ INSERT INTO findings (
   id, project_id, scan_id, engine_run_id, engine, category,
   rule_id, title, description, severity, cvss_score, cvss_vector, cwe,
   file_path, start_line, end_line, start_col, end_col, snippet,
-  pkg_name, installed_version, fixed_version, secret_type, references_json,
+  pkg_name, installed_version, fixed_version, secret_type,
+  url, host, port, method,
+  references_json,
   unique_id_from_tool, hash_code
 ) VALUES (
   ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?,
+  ?, ?, ?, ?,
+  ?, ?, ?, ?,
+  ?,
   ?, ?
 )
 ON CONFLICT(project_id, hash_code) DO UPDATE SET

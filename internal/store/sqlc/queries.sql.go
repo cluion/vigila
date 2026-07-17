@@ -316,7 +316,7 @@ func (q *Queries) GetEngineRun(ctx context.Context, id string) (EngineRun, error
 
 const getFinding = `-- name: GetFinding :one
 
-SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE id = ?
+SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE id = ?
 `
 
 // ============================================================================
@@ -349,6 +349,10 @@ func (q *Queries) GetFinding(ctx context.Context, id string) (Finding, error) {
 		&i.InstalledVersion,
 		&i.FixedVersion,
 		&i.SecretType,
+		&i.Url,
+		&i.Host,
+		&i.Port,
+		&i.Method,
 		&i.ReferencesJson,
 		&i.UniqueIDFromTool,
 		&i.HashCode,
@@ -473,7 +477,7 @@ func (q *Queries) ListEngineRunsByScan(ctx context.Context, scanID string) ([]En
 }
 
 const listFindingsByProject = `-- name: ListFindingsByProject :many
-SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE project_id = ?
+SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE project_id = ?
 ORDER BY
   CASE severity
     WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
@@ -521,6 +525,10 @@ func (q *Queries) ListFindingsByProject(ctx context.Context, arg ListFindingsByP
 			&i.InstalledVersion,
 			&i.FixedVersion,
 			&i.SecretType,
+			&i.Url,
+			&i.Host,
+			&i.Port,
+			&i.Method,
 			&i.ReferencesJson,
 			&i.UniqueIDFromTool,
 			&i.HashCode,
@@ -541,7 +549,7 @@ func (q *Queries) ListFindingsByProject(ctx context.Context, arg ListFindingsByP
 }
 
 const listFindingsByScan = `-- name: ListFindingsByScan :many
-SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE scan_id = ?
+SELECT id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at FROM findings WHERE scan_id = ?
 ORDER BY
   CASE severity
     WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
@@ -582,6 +590,10 @@ func (q *Queries) ListFindingsByScan(ctx context.Context, scanID string) ([]Find
 			&i.InstalledVersion,
 			&i.FixedVersion,
 			&i.SecretType,
+			&i.Url,
+			&i.Host,
+			&i.Port,
+			&i.Method,
 			&i.ReferencesJson,
 			&i.UniqueIDFromTool,
 			&i.HashCode,
@@ -602,7 +614,7 @@ func (q *Queries) ListFindingsByScan(ctx context.Context, scanID string) ([]Find
 }
 
 const listFindingsOnlyInScan = `-- name: ListFindingsOnlyInScan :many
-SELECT f.id, f.project_id, f.scan_id, f.engine_run_id, f.engine, f.category, f.rule_id, f.title, f.description, f.severity, f.cvss_score, f.cvss_vector, f.cwe, f.file_path, f.start_line, f.end_line, f.start_col, f.end_col, f.snippet, f.pkg_name, f.installed_version, f.fixed_version, f.secret_type, f.references_json, f.unique_id_from_tool, f.hash_code, f.status, f.created_at FROM scan_findings sf
+SELECT f.id, f.project_id, f.scan_id, f.engine_run_id, f.engine, f.category, f.rule_id, f.title, f.description, f.severity, f.cvss_score, f.cvss_vector, f.cwe, f.file_path, f.start_line, f.end_line, f.start_col, f.end_col, f.snippet, f.pkg_name, f.installed_version, f.fixed_version, f.secret_type, f.url, f.host, f.port, f.method, f.references_json, f.unique_id_from_tool, f.hash_code, f.status, f.created_at FROM scan_findings sf
 JOIN findings f ON f.id = sf.finding_id
 WHERE sf.scan_id = ?1 AND sf.hash_code NOT IN (
   SELECT other.hash_code FROM scan_findings other WHERE other.scan_id = ?2
@@ -653,6 +665,10 @@ func (q *Queries) ListFindingsOnlyInScan(ctx context.Context, arg ListFindingsOn
 			&i.InstalledVersion,
 			&i.FixedVersion,
 			&i.SecretType,
+			&i.Url,
+			&i.Host,
+			&i.Port,
+			&i.Method,
 			&i.ReferencesJson,
 			&i.UniqueIDFromTool,
 			&i.HashCode,
@@ -883,7 +899,7 @@ func (q *Queries) UpdateEngineRunStatus(ctx context.Context, arg UpdateEngineRun
 }
 
 const updateFindingStatus = `-- name: UpdateFindingStatus :one
-UPDATE findings SET status = ? WHERE id = ? RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at
+UPDATE findings SET status = ? WHERE id = ? RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at
 `
 
 type UpdateFindingStatusParams struct {
@@ -918,6 +934,10 @@ func (q *Queries) UpdateFindingStatus(ctx context.Context, arg UpdateFindingStat
 		&i.InstalledVersion,
 		&i.FixedVersion,
 		&i.SecretType,
+		&i.Url,
+		&i.Host,
+		&i.Port,
+		&i.Method,
 		&i.ReferencesJson,
 		&i.UniqueIDFromTool,
 		&i.HashCode,
@@ -998,13 +1018,17 @@ INSERT INTO findings (
   id, project_id, scan_id, engine_run_id, engine, category,
   rule_id, title, description, severity, cvss_score, cvss_vector, cwe,
   file_path, start_line, end_line, start_col, end_col, snippet,
-  pkg_name, installed_version, fixed_version, secret_type, references_json,
+  pkg_name, installed_version, fixed_version, secret_type,
+  url, host, port, method,
+  references_json,
   unique_id_from_tool, hash_code
 ) VALUES (
   ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?,
+  ?, ?, ?, ?,
+  ?, ?, ?, ?,
+  ?,
   ?, ?
 )
 ON CONFLICT(project_id, hash_code) DO UPDATE SET
@@ -1012,7 +1036,7 @@ ON CONFLICT(project_id, hash_code) DO UPDATE SET
   engine_run_id = excluded.engine_run_id,
   severity = excluded.severity,
   status = CASE WHEN findings.status = 'resolved' THEN 'open' ELSE findings.status END
-RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, references_json, unique_id_from_tool, hash_code, status, created_at
+RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at
 `
 
 type UpsertFindingParams struct {
@@ -1039,6 +1063,10 @@ type UpsertFindingParams struct {
 	InstalledVersion *string  `json:"installed_version"`
 	FixedVersion     *string  `json:"fixed_version"`
 	SecretType       *string  `json:"secret_type"`
+	Url              *string  `json:"url"`
+	Host             *string  `json:"host"`
+	Port             *string  `json:"port"`
+	Method           *string  `json:"method"`
 	ReferencesJson   *string  `json:"references_json"`
 	UniqueIDFromTool *string  `json:"unique_id_from_tool"`
 	HashCode         string   `json:"hash_code"`
@@ -1069,6 +1097,10 @@ func (q *Queries) UpsertFinding(ctx context.Context, arg UpsertFindingParams) (F
 		arg.InstalledVersion,
 		arg.FixedVersion,
 		arg.SecretType,
+		arg.Url,
+		arg.Host,
+		arg.Port,
+		arg.Method,
 		arg.ReferencesJson,
 		arg.UniqueIDFromTool,
 		arg.HashCode,
@@ -1098,6 +1130,10 @@ func (q *Queries) UpsertFinding(ctx context.Context, arg UpsertFindingParams) (F
 		&i.InstalledVersion,
 		&i.FixedVersion,
 		&i.SecretType,
+		&i.Url,
+		&i.Host,
+		&i.Port,
+		&i.Method,
 		&i.ReferencesJson,
 		&i.UniqueIDFromTool,
 		&i.HashCode,

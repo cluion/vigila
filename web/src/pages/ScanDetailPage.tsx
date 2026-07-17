@@ -117,6 +117,8 @@ export function ScanDetailPage({
           f.title.toLowerCase().includes(q) ||
           f.rule_id.toLowerCase().includes(q) ||
           (f.file_path || "").toLowerCase().includes(q) ||
+          (f.url || "").toLowerCase().includes(q) ||
+          (f.host || "").toLowerCase().includes(q) ||
           (f.description || "").toLowerCase().includes(q),
       );
     }
@@ -333,6 +335,13 @@ export function ScanDetailPage({
                   <TableCell className="align-top font-mono text-xs text-muted-foreground">
                     {f.file_path && <div>{f.file_path}</div>}
                     {f.start_line && <div>第 {f.start_line} 行</div>}
+                    {f.url && <div>{f.url}</div>}
+                    {f.host && (
+                      <div>
+                        {f.host}
+                        {f.port ? `:${f.port}` : ""}
+                      </div>
+                    )}
                     {f.pkg_name && (
                       <div>
                         {f.pkg_name} @ {f.installed_version}

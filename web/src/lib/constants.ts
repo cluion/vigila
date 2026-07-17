@@ -27,6 +27,12 @@ export function diffFindingLocation(f: Finding): string {
   if (f.file_path) {
     return f.start_line ? `${f.file_path}:${f.start_line}` : f.file_path;
   }
+  if (f.url) {
+    return f.url;
+  }
+  if (f.host) {
+    return f.port ? `${f.host}:${f.port}` : f.host;
+  }
   if (f.pkg_name) {
     return f.installed_version ? `${f.pkg_name}@${f.installed_version}` : f.pkg_name;
   }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sV -oX - scanme.nmap.org" start="1700000000" version="7.94">
+  <host starttime="1700000000" endtime="1700000010">
+    <status state="up" reason="syn-ack"/>
+    <address addr="45.33.32.156" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="scanme.nmap.org" type="user"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack" reason_ttl="0"/>
+        <service name="ssh" product="OpenSSH" version="6.6.1p1" extrainfo="Ubuntu 2ubuntu2.13; protocol 2.0" ostype="Linux" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack" reason_ttl="0"/>
+        <service name="http" product="Apache httpd" version="2.4.7" extrainfo="(Ubuntu)" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="9929">
+        <state state="open" reason="syn-ack" reason_ttl="0"/>
+        <service name="nping-echo" method="table" conf="3"/>
+      </port>
+      <port protocol="tcp" portid="31337">
+        <state state="closed" reason="conn-refused" reason_ttl="0"/>
+      </port>
+    </ports>
+  </host>
+  <runstats>
+    <finished time="1700000010" timestr="Thu Jul 17 00:00:10 2026"/>
+  </runstats>
+</nmaprun>

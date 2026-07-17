@@ -64,6 +64,18 @@ var builtinProfiles = map[string]Profile{
 		Engines:     []string{"semgrep", "trivy", "gitleaks"},
 		FailFast:    false,
 	},
+	"dast-only": {
+		Name:        "dast-only",
+		Description: "網頁應用動態掃描 DAST target 為 URL",
+		Engines:     []string{"nuclei"},
+		FailFast:    false,
+	},
+	"va-only": {
+		Name:        "va-only",
+		Description: "網路服務弱點評估 VA target 為 host 或 IP",
+		Engines:     []string{"nmap"},
+		FailFast:    false,
+	},
 }
 
 /* GetProfile 依名稱取得 profile 先查內建 再查檔案 */

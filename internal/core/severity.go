@@ -33,3 +33,24 @@ func NormalizeSeverity(s string) model.Severity {
 		return model.SeverityUnknown
 	}
 }
+
+/*
+	SeverityFromCVSS 依 CVSS 分數對應 5 級 severity
+
+Nmap VA 引擎以 CVSS 分數表示風險 無 severity 標籤
+對應標準 CVSS v3 閾值 9.0 Critical 7.0 High 4.0 Medium 0.1 Low
+*/
+func SeverityFromCVSS(score float64) model.Severity {
+	switch {
+	case score >= 9.0:
+		return model.SeverityCritical
+	case score >= 7.0:
+		return model.SeverityHigh
+	case score >= 4.0:
+		return model.SeverityMedium
+	case score > 0:
+		return model.SeverityLow
+	default:
+		return model.SeverityUnknown
+	}
+}

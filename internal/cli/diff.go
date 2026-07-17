@@ -63,6 +63,13 @@ func printDiffFindings(out io.Writer, findings []sqlc.Finding) {
 			if f.StartLine != nil {
 				location = fmt.Sprintf("%s:%d", location, *f.StartLine)
 			}
+		} else if f.Url != nil {
+			location = *f.Url
+		} else if f.Host != nil {
+			location = *f.Host
+			if f.Port != nil {
+				location = fmt.Sprintf("%s:%s", location, *f.Port)
+			}
 		} else if f.PkgName != nil {
 			location = *f.PkgName
 			if f.InstalledVersion != nil {

@@ -16,6 +16,8 @@ import (
 	SAST   engine + rule_id + file_path + start_line
 	SCA    engine + cve + pkg_name + installed_version
 	Secret engine + rule_id + file_path + start_line
+	DAST   engine + rule_id + url
+	VA     engine + rule_id + host + port
 */
 func Fingerprint(f model.Finding) string {
 	var parts []string
@@ -29,6 +31,10 @@ func Fingerprint(f model.Finding) string {
 		}
 	case model.CategorySCA:
 		parts = append(parts, f.RuleID, f.PkgName, f.InstalledVersion)
+	case model.CategoryDAST:
+		parts = append(parts, f.RuleID, f.URL)
+	case model.CategoryVA:
+		parts = append(parts, f.RuleID, f.Host, f.Port)
 	default:
 		parts = append(parts, f.RuleID, f.FilePath)
 	}

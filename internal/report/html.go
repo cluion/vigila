@@ -114,6 +114,8 @@ tr:last-child td { border-bottom:none; }
 {{if .FilePath}}{{.FilePath}}<br>{{end}}
 {{if .StartLine}}第 {{.StartLine}} 行{{end}}
 {{if .PkgName}}<br>{{.PkgName}} @ {{.InstalledVersion}}{{end}}
+{{if .Url}}<br>{{.Url}}{{end}}
+{{if .Host}}{{if .Port}}<br>{{.Host}}:{{.Port}}{{else}}<br>{{.Host}}{{end}}{{end}}
 </td>
 </tr>
 {{end}}

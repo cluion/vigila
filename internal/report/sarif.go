@@ -93,6 +93,24 @@ func GenerateSARIF(scan sqlc.Scan, runs []sqlc.EngineRun, findings []sqlc.Findin
 				}
 				loc := sarif.NewLocationWithPhysicalLocation(physLoc)
 				result.WithLocations([]*sarif.Location{loc})
+			} else if f.Url != nil {
+				/* DAST finding 無檔案位置 以 URL 為 location 的 message */
+				loc := sarif.NewLocationWithPhysicalLocation(
+					sarif.NewPhysicalLocation().
+						WithArtifactLocation(sarif.NewArtifactLocation().WithUri(*f.Url)),
+				)
+				result.WithLocations([]*sarif.Location{loc})
+			} else if f.Host != nil {
+				/* VA finding 以 host:port 為 location */
+				locLabel := *f.Host
+				if f.Port != nil {
+					locLabel = locLabel + ":" + *f.Port
+				}
+				loc := sarif.NewLocationWithPhysicalLocation(
+					sarif.NewPhysicalLocation().
+						WithArtifactLocation(sarif.NewArtifactLocation().WithUri(locLabel)),
+				)
+				result.WithLocations([]*sarif.Location{loc})
 			}
 
 			/* 擴充屬性 PropertyBag 內部 map 需先初始化 */
@@ -111,6 +129,18 @@ func GenerateSARIF(scan sqlc.Scan, runs []sqlc.EngineRun, findings []sqlc.Findin
 			}
 			if f.PkgName != nil {
 				pb.AddString("pkg_name", *f.PkgName)
+			}
+			if f.Url != nil {
+				pb.AddString("url", *f.Url)
+			}
+			if f.Host != nil {
+				pb.AddString("host", *f.Host)
+			}
+			if f.Port != nil {
+				pb.AddString("port", *f.Port)
+			}
+			if f.Method != nil {
+				pb.AddString("method", *f.Method)
 			}
 			result.AttachPropertyBag(pb)
 

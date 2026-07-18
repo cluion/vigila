@@ -14,6 +14,7 @@ import (
 各類別公式
 
 	SAST   engine + rule_id + file_path + start_line
+	IaC    engine + rule_id + file_path + start_line
 	SCA    engine + cve + pkg_name + installed_version
 	Secret engine + rule_id + file_path + start_line
 	DAST   engine + rule_id + url
@@ -24,7 +25,7 @@ func Fingerprint(f model.Finding) string {
 	parts = append(parts, f.Engine)
 
 	switch f.Category {
-	case model.CategorySAST, model.CategorySecret:
+	case model.CategorySAST, model.CategorySecret, model.CategoryIaC:
 		parts = append(parts, f.RuleID, f.FilePath)
 		if f.StartLine != nil {
 			parts = append(parts, fmt.Sprintf("%d", *f.StartLine))

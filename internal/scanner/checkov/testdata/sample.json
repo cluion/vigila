@@ -1,0 +1,25 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_260",
+        "check_name": "Ensure no security groups allow ingress from 0.0.0.0:0 to port 80",
+        "severity": null,
+        "file_path": "/main.tf",
+        "file_line_range": [5, 12],
+        "resource": "aws_security_group.sg",
+        "guideline": "https://docs.prismacloud.io/policy/ensure-sg-no-ingress"
+      },
+      {
+        "check_id": "CKV_AWS_20",
+        "check_name": "S3 Bucket has an ACL defined which allows public access",
+        "severity": "HIGH",
+        "file_path": "/main.tf",
+        "file_line_range": [1, 4],
+        "resource": "aws_s3_bucket.b",
+        "guideline": "https://docs.bridgecrew.io/docs/s3-bucket-public-acl"
+      }
+    ]
+  }
+}

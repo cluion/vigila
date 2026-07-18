@@ -7,6 +7,7 @@ import (
 	"github.com/cluion/vigila/internal/scanner"
 
 	/* 匿名 import 觸發 adapter 註冊 與 cmd/vigila/main.go 一致 */
+	_ "github.com/cluion/vigila/internal/scanner/checkov"
 	_ "github.com/cluion/vigila/internal/scanner/gitleaks"
 	_ "github.com/cluion/vigila/internal/scanner/grype"
 	_ "github.com/cluion/vigila/internal/scanner/nmap"

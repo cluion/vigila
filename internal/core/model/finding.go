@@ -10,6 +10,7 @@ const (
 	CategorySecret Category = "SECRET"
 	CategoryDAST   Category = "DAST"
 	CategoryVA     Category = "VA"
+	CategoryIaC    Category = "IAC"
 )
 
 /* Severity 統一 5 級嚴重度 數字越大越嚴重 */

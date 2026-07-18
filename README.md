@@ -19,6 +19,7 @@ make build
 
 1. **本機安裝** 裝在 PATH 上 vigila 直接呼叫最快
    - Semgrep `pip install semgrep` 或見 https://semgrep.dev
+   - Checkov `pip install checkov` 或見 https://www.checkov.io
    - Trivy 見 https://trivy.dev
    - Gitleaks 見 https://github.com/gitleaks/gitleaks
    - Grype 見 https://github.com/anchore/grype
@@ -86,10 +87,11 @@ vigila engine list
 | SCA 互補 | OSV-Scanner | Google OSV.dev 資料庫 多生態系依賴漏洞 |
 | Secret 密鑰 | Gitleaks | 洩漏的 token key 密碼 |
 | Secret 驗證 | TruffleHog | 驗證式密鑰 只收已驗證的活密鑰 |
+| IaC 設定掃描 | Checkov | Terraform K8s Dockerfile 等錯誤設定 |
 | DAST 動態掃描 | Nuclei | 網頁漏洞 target 為 URL |
 | VA 弱點評估 | Nmap | 網路服務偵測 target 為 host 或 IP |
 
-五類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 DAST 對運行中的網頁發請求 VA 盤點開放的服務
+六類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 IaC 找基礎設施設定的錯 DAST 對運行中的網頁發請求 VA 盤點開放的服務
 
 ### 掃描模式
 

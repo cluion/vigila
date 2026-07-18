@@ -24,6 +24,7 @@ func init() { scanner.Register(&Scanner{}) }
 func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySAST }
 func (s *Scanner) Binary() string           { return binaryName }
+func (s *Scanner) VersionArgs() []string    { return []string{"--version"} }
 
 /* TargetKinds semgrep 掃描原始碼 只吃本機路徑 */
 func (s *Scanner) TargetKinds() []scanner.TargetKind {

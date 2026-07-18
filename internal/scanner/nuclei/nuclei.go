@@ -30,6 +30,7 @@ func init() { scanner.Register(&Scanner{}) }
 func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategoryDAST }
 func (s *Scanner) Binary() string           { return binaryName }
+func (s *Scanner) VersionArgs() []string    { return []string{"-version"} }
 
 /* TargetKinds nuclei 以 -u 指定完整網址 只吃 URL */
 func (s *Scanner) TargetKinds() []scanner.TargetKind {

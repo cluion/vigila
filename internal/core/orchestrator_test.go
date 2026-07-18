@@ -24,6 +24,7 @@ type fakeScanner struct {
 func (f *fakeScanner) Name() string             { return f.name }
 func (f *fakeScanner) Category() model.Category { return model.CategorySAST }
 func (f *fakeScanner) Binary() string           { return f.name }
+func (f *fakeScanner) VersionArgs() []string    { return []string{"--version"} }
 func (f *fakeScanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }

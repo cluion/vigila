@@ -20,6 +20,7 @@ type fakeScanner struct {
 func (f *fakeScanner) Name() string             { return f.name }
 func (f *fakeScanner) Category() model.Category { return f.cat }
 func (f *fakeScanner) Binary() string           { return f.name }
+func (f *fakeScanner) VersionArgs() []string    { return []string{"--version"} }
 func (f *fakeScanner) CheckInstalled() error    { return nil }
 func (f *fakeScanner) TargetKinds() []TargetKind {
 	return f.kinds

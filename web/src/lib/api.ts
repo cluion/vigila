@@ -116,6 +116,8 @@ export interface Engine {
   category: string;
   target_kinds: string[];
   installed: boolean;
+  version: string; // 偵測到的版本 未安裝或抓不到為空字串
+  source: "system" | "managed" | "missing";
   install_hint: {
     docs_url: string;
     command: string;

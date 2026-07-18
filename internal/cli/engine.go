@@ -69,29 +69,44 @@ func newEngineListCmd() *cobra.Command {
 
 /* engineRow 為 engine list 的一列 */
 type engineRow struct {
-	name      string
-	category  string
-	kinds     string
-	installed bool
+	name     string
+	category string
+	kinds    string
+	version  string
+	source   scanner.Source
 }
 
 /*
 	collectEngineRows 把引擎轉為顯示列 依名稱排序
 
-安裝狀態以 CheckInstalled 是否回錯判定 此處會實際查 PATH
+來源以 managed 優先再查 PATH 判定 版本實際執行引擎版本指令取得
+未安裝的引擎不執行版本指令 version 留空
 */
 func collectEngineRows(engines []scanner.Scanner) []engineRow {
 	rows := make([]engineRow, 0, len(engines))
 	for _, e := range engines {
 		rows = append(rows, engineRow{
-			name:      e.Name(),
-			category:  string(e.Category()),
-			kinds:     scanner.KindsOf(e),
-			installed: e.CheckInstalled() == nil,
+			name:     e.Name(),
+			category: string(e.Category()),
+			kinds:    scanner.KindsOf(e),
+			version:  scanner.DetectVersion(e),
+			source:   scanner.ResolveSource(e.Binary()),
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	return rows
+}
+
+/* sourceLabel 把來源列舉轉為中文顯示字串 */
+func sourceLabel(s scanner.Source) string {
+	switch s {
+	case scanner.SourceSystem:
+		return "本機系統"
+	case scanner.SourceManaged:
+		return "managed 下載"
+	default:
+		return "未安裝"
+	}
 }
 
 /*
@@ -100,14 +115,14 @@ func collectEngineRows(engines []scanner.Scanner) []engineRow {
 依顯示寬度對齊 而非 rune 數 中文標題一字佔兩欄 tabwriter 會算錯導致錯位
 */
 func renderEngineRows(out io.Writer, rows []engineRow) {
-	header := []string{"引擎", "類別", "目標型態", "狀態"}
+	header := []string{"引擎", "類別", "目標型態", "版本", "來源"}
 	cells := [][]string{header}
 	for _, r := range rows {
-		status := "未安裝"
-		if r.installed {
-			status = "已安裝"
+		version := r.version
+		if version == "" {
+			version = "—"
 		}
-		cells = append(cells, []string{r.name, r.category, r.kinds, status})
+		cells = append(cells, []string{r.name, r.category, r.kinds, version, sourceLabel(r.source)})
 	}
 
 	/* 逐欄取最大顯示寬度 最後一欄不需補尾 */

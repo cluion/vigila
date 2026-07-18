@@ -38,6 +38,7 @@ func init() { scanner.Register(&Scanner{}) }
 func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySecret }
 func (s *Scanner) Binary() string           { return binaryName }
+func (s *Scanner) VersionArgs() []string    { return []string{"version"} }
 
 /* TargetKinds gitleaks 掃描本機目錄或 git repo 只吃路徑 */
 func (s *Scanner) TargetKinds() []scanner.TargetKind {

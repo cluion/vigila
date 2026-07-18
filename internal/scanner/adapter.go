@@ -35,6 +35,7 @@ type Scanner interface {
 	Name() string
 	Category() model.Category
 	Binary() string
+	VersionArgs() []string // 取版本的 CLI 參數 各引擎不同
 	TargetKinds() []TargetKind
 	InstallHint() InstallHint
 	CheckInstalled() error

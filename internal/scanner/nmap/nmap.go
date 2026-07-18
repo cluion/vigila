@@ -30,6 +30,7 @@ func init() { scanner.Register(&Scanner{}) }
 func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategoryVA }
 func (s *Scanner) Binary() string           { return binaryName }
+func (s *Scanner) VersionArgs() []string    { return []string{"--version"} }
 
 /* TargetKinds nmap 掃描網路主機 只吃 host IP 或 host:port */
 func (s *Scanner) TargetKinds() []scanner.TargetKind {

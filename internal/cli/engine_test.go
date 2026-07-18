@@ -21,6 +21,7 @@ type engineStub struct {
 func (e *engineStub) Name() string                      { return e.name }
 func (e *engineStub) Category() model.Category          { return e.cat }
 func (e *engineStub) Binary() string                    { return e.name }
+func (e *engineStub) VersionArgs() []string             { return []string{"--version"} }
 func (e *engineStub) TargetKinds() []scanner.TargetKind { return e.kinds }
 func (e *engineStub) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install " + e.name}
@@ -70,25 +71,26 @@ func TestCollectEngineRowsSortedByName(t *testing.T) {
 	if rows[0].name != "alpha" || rows[1].name != "mid" || rows[2].name != "zeta" {
 		t.Errorf("應依名稱排序 實際 %s %s %s", rows[0].name, rows[1].name, rows[2].name)
 	}
-	if !rows[0].installed {
-		t.Error("alpha checkErr 為 nil 應標記為已安裝")
-	}
-	if rows[1].installed {
-		t.Error("mid checkErr 非 nil 應標記為未安裝")
+	/* stub 的 binary 名不在 PATH 也不在 managed 目錄 來源應為 missing */
+	for _, r := range rows {
+		if r.source != scanner.SourceMissing {
+			t.Errorf("引擎 %s 不在任何來源 應為 missing 實際 %q", r.name, r.source)
+		}
 	}
 }
 
 func TestRenderEngineRows(t *testing.T) {
 	rows := []engineRow{
-		{name: "semgrep", category: "SAST", kinds: "path", installed: true},
-		{name: "nmap", category: "VA", kinds: "host", installed: false},
+		{name: "semgrep", category: "SAST", kinds: "path", version: "1.85.0", source: scanner.SourceSystem},
+		{name: "nmap", category: "VA", kinds: "host", version: "", source: scanner.SourceMissing},
 	}
 
 	var out bytes.Buffer
 	renderEngineRows(&out, rows)
 	got := out.String()
 
-	for _, want := range []string{"semgrep", "SAST", "path", "已安裝", "nmap", "VA", "host", "未安裝"} {
+	/* nmap 未安裝 版本應以破折號呈現 且來源標為未安裝 */
+	for _, want := range []string{"semgrep", "SAST", "path", "1.85.0", "本機系統", "nmap", "VA", "host", "—", "未安裝"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("輸出應含 %q 實際:\n%s", want, got)
 		}
@@ -97,31 +99,33 @@ func TestRenderEngineRows(t *testing.T) {
 
 func TestRenderEngineRowsAligned(t *testing.T) {
 	rows := []engineRow{
-		{name: "trufflehog", category: "SECRET", kinds: "path", installed: true},
-		{name: "nmap", category: "VA", kinds: "host", installed: false},
+		{name: "trufflehog", category: "SECRET", kinds: "path", version: "3.95.9", source: scanner.SourceManaged},
+		{name: "nmap", category: "VA", kinds: "host", version: "", source: scanner.SourceMissing},
 	}
 
 	var out bytes.Buffer
 	renderEngineRows(&out, rows)
 	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
 
-	/* 每一列的「狀態」欄應在相同的顯示欄位起始 中文標題不得使欄位錯位 */
+	/* 每一列的「來源」欄應在相同的顯示欄位起始 中文標題不得使欄位錯位 */
 	var col int
 	for i, line := range lines {
-		idx := strings.Index(line, "狀")
 		if i == 0 {
-			col = displayWidth(line[:idx])
+			col = displayWidth(line[:strings.Index(line, "來源")])
 			continue
 		}
 		var mark string
-		if strings.Contains(line, "已安裝") {
-			mark = "已安裝"
-		} else {
+		switch {
+		case strings.Contains(line, "本機系統"):
+			mark = "本機系統"
+		case strings.Contains(line, "managed 下載"):
+			mark = "managed 下載"
+		default:
 			mark = "未安裝"
 		}
 		at := displayWidth(line[:strings.Index(line, mark)])
 		if at != col {
-			t.Errorf("第 %d 列狀態欄起始於顯示欄位 %d 標題在 %d 未對齊\n%s", i, at, col, out.String())
+			t.Errorf("第 %d 列來源欄起始於顯示欄位 %d 標題在 %d 未對齊\n%s", i, at, col, out.String())
 		}
 	}
 }

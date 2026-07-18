@@ -392,6 +392,7 @@ type webFakeScanner struct{}
 func (f *webFakeScanner) Name() string             { return "fake-web" }
 func (f *webFakeScanner) Category() model.Category { return model.CategorySAST }
 func (f *webFakeScanner) Binary() string           { return "fake-web" }
+func (f *webFakeScanner) VersionArgs() []string    { return []string{"--version"} }
 func (f *webFakeScanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetPath}
 }

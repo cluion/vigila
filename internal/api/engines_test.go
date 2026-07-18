@@ -22,6 +22,7 @@ type infoStub struct {
 func (e *infoStub) Name() string                      { return e.name }
 func (e *infoStub) Category() model.Category          { return e.cat }
 func (e *infoStub) Binary() string                    { return e.name }
+func (e *infoStub) VersionArgs() []string             { return []string{"--version"} }
 func (e *infoStub) TargetKinds() []scanner.TargetKind { return e.kinds }
 func (e *infoStub) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{DocsURL: "https://example.com", Command: "install " + e.name}
@@ -58,11 +59,17 @@ func TestEngineInfos(t *testing.T) {
 	if len(infos[0].TargetKinds) != 1 || infos[0].TargetKinds[0] != "path" {
 		t.Errorf("alpha 目標型態應為 [path] 實際 %v", infos[0].TargetKinds)
 	}
-	if !infos[0].Installed {
-		t.Error("alpha checkErr 為 nil 應標記已安裝")
-	}
-	if infos[1].Installed {
-		t.Error("zeta checkErr 非 nil 應標記未安裝")
+	/* stub 的 binary 名不在 PATH 也不在 managed 來源皆為 missing 版本應留空 */
+	for _, info := range infos {
+		if info.Source != "missing" {
+			t.Errorf("引擎 %s 來源應為 missing 實際 %s", info.Name, info.Source)
+		}
+		if info.Installed {
+			t.Errorf("引擎 %s 不在任何來源 不應標記已安裝", info.Name)
+		}
+		if info.Version != "" {
+			t.Errorf("引擎 %s 未安裝版本應留空 實際 %s", info.Name, info.Version)
+		}
 	}
 }
 
@@ -82,6 +89,8 @@ func TestListEnginesResponseShape(t *testing.T) {
 		Category    string   `json:"category"`
 		TargetKinds []string `json:"target_kinds"`
 		Installed   bool     `json:"installed"`
+		Version     string   `json:"version"`
+		Source      string   `json:"source"`
 		InstallHint struct {
 			DocsURL string `json:"docs_url"`
 			Command string `json:"command"`
@@ -110,7 +119,10 @@ func TestListEnginesResponseShape(t *testing.T) {
 		t.Errorf("shape-probe 目標型態應為 [host] 實際 %v", probe.TargetKinds)
 	}
 	if probe.Installed {
-		t.Error("shape-probe checkErr 非 nil 應為未安裝")
+		t.Error("shape-probe 不在任何來源 應為未安裝")
+	}
+	if probe.Source != "missing" {
+		t.Errorf("shape-probe 來源應為 missing 實際 %s", probe.Source)
 	}
 	if probe.InstallHint.DocsURL == "" || probe.InstallHint.Command == "" {
 		t.Errorf("shape-probe 應含安裝指引 實際 %+v", probe.InstallHint)

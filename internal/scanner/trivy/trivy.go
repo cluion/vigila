@@ -21,6 +21,7 @@ func init() { scanner.Register(&Scanner{}) }
 func (s *Scanner) Name() string             { return binaryName }
 func (s *Scanner) Category() model.Category { return model.CategorySCA }
 func (s *Scanner) Binary() string           { return binaryName }
+func (s *Scanner) VersionArgs() []string    { return []string{"--version"} }
 
 /* TargetKinds 目前以 trivy fs 掃描本機路徑 未來若支援 image 再擴充 */
 func (s *Scanner) TargetKinds() []scanner.TargetKind {

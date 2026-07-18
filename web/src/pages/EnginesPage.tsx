@@ -34,7 +34,19 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-/* 引擎面板 唯讀顯示已註冊引擎的類別 可接受目標型態與安裝狀態 */
+/* sourceMeta 把來源轉為顯示標籤與圓點色 */
+function sourceMeta(source: Engine["source"]): { label: string; dot: string; text: string } {
+  switch (source) {
+    case "system":
+      return { label: "本機系統", dot: "bg-success", text: "text-success" };
+    case "managed":
+      return { label: "managed 下載", dot: "bg-indigo", text: "text-indigo" };
+    default:
+      return { label: "未安裝", dot: "bg-muted-foreground/50", text: "text-muted-foreground" };
+  }
+}
+
+/* 引擎面板 唯讀顯示已註冊引擎的類別 目標型態 版本與來源 */
 export function EnginesPage() {
   const [engines, setEngines] = useState<Engine[] | null>(null);
   const [error, setError] = useState("");
@@ -62,8 +74,8 @@ export function EnginesPage() {
       <div className="mb-4">
         <h2 className="text-base font-semibold">掃描引擎</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          共 {engines.length} 個引擎 已安裝 {installedCount} 個。未安裝的引擎需自行加入 PATH
-          後才能使用。
+          共 {engines.length} 個引擎 已安裝 {installedCount} 個。未安裝的引擎可用 vigila engine
+          install 下載 或自行加入 PATH。
         </p>
       </div>
 
@@ -74,51 +86,53 @@ export function EnginesPage() {
               <TableHead>引擎</TableHead>
               <TableHead>類別</TableHead>
               <TableHead>目標型態</TableHead>
-              <TableHead>狀態</TableHead>
+              <TableHead>版本</TableHead>
+              <TableHead>來源</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {engines.map((e) => (
-              <TableRow key={e.name}>
-                <TableCell className="font-medium">{e.name}</TableCell>
-                <TableCell>
-                  <EngineBadge>{e.category}</EngineBadge>
-                </TableCell>
-                <TableCell className="text-[13px] text-muted-foreground">
-                  {e.target_kinds.join(" ")}
-                </TableCell>
-                <TableCell>
-                  {e.installed ? (
-                    <span className="inline-flex items-center gap-1 text-[13px] text-success">
-                      <span className="size-1.5 rounded-full bg-success" />
-                      已安裝
-                    </span>
-                  ) : (
+            {engines.map((e) => {
+              const src = sourceMeta(e.source);
+              return (
+                <TableRow key={e.name}>
+                  <TableCell className="font-medium">{e.name}</TableCell>
+                  <TableCell>
+                    <EngineBadge>{e.category}</EngineBadge>
+                  </TableCell>
+                  <TableCell className="text-[13px] text-muted-foreground">
+                    {e.target_kinds.join(" ")}
+                  </TableCell>
+                  <TableCell className="font-mono text-[13px] tabular-nums">
+                    {e.version || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
                     <div className="space-y-1.5">
-                      <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
-                        <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-                        未安裝
+                      <span className={`inline-flex items-center gap-1 text-[13px] ${src.text}`}>
+                        <span className={`size-1.5 rounded-full ${src.dot}`} />
+                        {src.label}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                          {e.install_hint.command}
-                        </code>
-                        <CopyButton text={e.install_hint.command} />
-                        <a
-                          href={e.install_hint.docs_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-0.5 text-xs text-indigo hover:underline"
-                        >
-                          文件
-                          <ExternalLink className="size-3" />
-                        </a>
-                      </div>
+                      {!e.installed && (
+                        <div className="flex items-center gap-2">
+                          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                            {e.install_hint.command}
+                          </code>
+                          <CopyButton text={e.install_hint.command} />
+                          <a
+                            href={e.install_hint.docs_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 text-xs text-indigo hover:underline"
+                          >
+                            文件
+                            <ExternalLink className="size-3" />
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

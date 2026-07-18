@@ -237,3 +237,14 @@ func TestRunProfilePassesFailFast(t *testing.T) {
 		t.Error("FailFast profile 首引擎失敗後 不應執行第二個引擎")
 	}
 }
+
+/* TestRunSBOMOnlyRejectsNonPath URL host 目標不適用 SBOM 應直接回錯不建立 scan */
+func TestRunSBOMOnlyRejectsNonPath(t *testing.T) {
+	q := openTestDB(t)
+	o := New(q)
+	for _, target := range []string{"https://example.com", "scanme.nmap.org:443"} {
+		if _, err := o.RunSBOMOnly(context.Background(), target); err == nil {
+			t.Errorf("非路徑目標 %s 應回錯", target)
+		}
+	}
+}

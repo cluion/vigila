@@ -130,6 +130,45 @@ func (o *Orchestrator) RunProfile(ctx context.Context, profileName string, targe
 	return o.runAndFinish(ctx, scanCtx, scanners, target, optsMap)
 }
 
+/*
+	RunSBOMOnly 只產 SBOM 不跑漏洞引擎
+
+建立一筆 type sbom 的 scan 僅產出 SBOM artifact 供不需漏洞掃描只要物料清單的情境
+僅支援本機路徑目標 狀態依 SBOM 產生成敗決定
+*/
+func (o *Orchestrator) RunSBOMOnly(ctx context.Context, target string) (*ScanResult, error) {
+	if scanner.DetectTargetKind(target) != scanner.TargetPath {
+		return nil, fmt.Errorf("SBOM 僅支援本機路徑目標 %s 非路徑", target)
+	}
+
+	sc, err := o.beginScan(ctx, target, "sbom", "", false)
+	if err != nil {
+		return nil, err
+	}
+
+	result := newScanResult(sc.scanID)
+	start := time.Now()
+	o.emit("scan_started", map[string]interface{}{"scan_id": sc.scanID, "target": target})
+
+	o.generateSBOM(ctx, sc, result)
+	result.DurationMs = time.Since(start).Milliseconds()
+
+	completed := time.Now()
+	status := "completed"
+	if result.SBOMErr != nil {
+		status = "failed"
+	}
+	_, _ = o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
+		ID:          sc.scanID,
+		Status:      status,
+		StartedAt:   &start,
+		CompletedAt: &completed,
+	})
+	o.emit("scan_completed", map[string]interface{}{"scan_id": sc.scanID, "status": status})
+
+	return result, result.SBOMErr
+}
+
 /* scanContext 為一次掃描的上下文 含 project scan 起始時間 */
 type scanContext struct {
 	projectID string

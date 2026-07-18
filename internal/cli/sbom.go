@@ -10,21 +10,53 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/cluion/vigila/internal/core"
 	"github.com/cluion/vigila/internal/sbom"
 	"github.com/cluion/vigila/internal/store"
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
 /*
-	NewSBOMCmd 建立 sbom 子命令群組
+	NewSBOMCmd 建立 sbom 命令群組
 
-sbom export 把掃描已產生的 SBOM 匯出成檔案 供 CI 上傳或給下游工具
-SBOM 由 vigila scan --sbom 於掃描時產生 存為 scan artifact
+sbom <target>       只產 SBOM 不跑漏洞引擎 建立一筆 scan 存為 artifact
+sbom export <id>    把掃描已產生的 SBOM 匯出成檔案 供 CI 上傳或給下游工具
+帶目標時直接產生 不帶引數時顯示說明 export 為子命令優先解析
 */
 func NewSBOMCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sbom",
-		Short: "軟體物料清單 SBOM 管理",
+		Use:   "sbom [target]",
+		Short: "軟體物料清單 SBOM 產生與管理",
+		Long: `不需漏洞掃描 只產生軟體物料清單 SBOM
+
+  vigila sbom ./myapp            只產 SBOM 不跑漏洞引擎
+  vigila sbom export <scan-id>   匯出掃描的 SBOM
+
+SBOM 以 syft 產 CycloneDX JSON 存為 scan artifact 僅支援本機路徑目標`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+
+			target := args[0]
+			ctx := context.Background()
+			db, err := store.Open(ctx, store.Config{})
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "正在為 %s 產生 SBOM ...\n", target)
+			result, err := core.New(sqlc.New(db)).RunSBOMOnly(ctx, target)
+			if err != nil {
+				return fmt.Errorf("SBOM 產生失敗: %w", err)
+			}
+			fmt.Fprintf(out, "\nSBOM 完成 scan %s\n  套件: %d 個\n  匯出: vigila sbom export %s -o sbom.json\n",
+				result.ScanID, result.SBOMPackages, result.ScanID)
+			return nil
+		},
 	}
 	cmd.AddCommand(newSBOMExportCmd())
 	return cmd

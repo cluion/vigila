@@ -51,6 +51,9 @@ vigila scan ./myapp --profile code-audit
 # 掃描時順帶產生 SBOM 軟體物料清單 需 syft 僅路徑目標
 vigila scan ./myapp --engine trivy --sbom
 
+# 只產 SBOM 不跑漏洞引擎
+vigila sbom ./myapp
+
 # 啟動網頁 http://localhost:7780
 vigila serve
 

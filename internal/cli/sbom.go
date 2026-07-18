@@ -164,7 +164,8 @@ func exportSBOM(ctx context.Context, q *sqlc.Queries, scanID, output string, out
 		return err
 	}
 
-	if err := os.WriteFile(output, []byte(art.Content), 0o644); err != nil {
+	/* 0o600 SBOM 產物僅本人可讀 可能含私有依賴資訊 */
+	if err := os.WriteFile(output, []byte(art.Content), 0o600); err != nil {
 		return fmt.Errorf("寫入檔案失敗: %w", err)
 	}
 

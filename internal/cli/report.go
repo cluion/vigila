@@ -73,7 +73,8 @@ func NewReportCmd() *cobra.Command {
 			/* 輸出 指定 -o 寫檔 否則印 stdout */
 			out := cmd.OutOrStdout()
 			if output != "" {
-				if err := os.WriteFile(output, []byte(content), 0o644); err != nil {
+				/* 0o600 報告含漏洞明細 可能有密鑰片段 僅本人可讀 */
+				if err := os.WriteFile(output, []byte(content), 0o600); err != nil {
 					return fmt.Errorf("寫入檔案失敗: %w", err)
 				}
 				fmt.Fprintf(out, "報告已匯出 %s 共 %d 個漏洞\n", output, len(findings))

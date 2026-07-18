@@ -28,7 +28,7 @@ func MountSPA(r chi.Router, distFS fs.FS, apiPrefix string) {
 		cleanPath := strings.TrimPrefix(r.URL.Path, "/")
 		if cleanPath != "" {
 			if f, err := distFS.Open(cleanPath); err == nil {
-				f.Close()
+				_ = f.Close()
 				fileServer.ServeHTTP(w, r)
 				return
 			}

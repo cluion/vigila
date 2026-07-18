@@ -1,7 +1,11 @@
 # Vigila CI workflow
 #
 # 觸發條件 push 到 main 與所有 PR
-# 執行內容 前端型別檢查與編譯 Go vet 與 race 測試
+# 執行內容 前端型別檢查與編譯 Go vet race 測試 品質與安全掃描
+#   staticcheck   品質 靜態分析 抓 vet 抓不到的 bug pattern
+#   govulncheck   CVE 掃描 比對 Go 依賴的已知漏洞資料庫
+#   gosec         弱點 安全靜態分析 排除 G204 G304 兩者為掃描器編排器的本質用途
+#                 G204 以變數啟動子程序 即執行各引擎 binary G304 讀使用者指定的設定檔路徑
 # 前端需先 build 產出 web/dist 否則 go:embed 編譯失敗
 
 name: ci
@@ -55,3 +59,18 @@ jobs:
 
       - name: go test
         run: go test -race ./...
+
+      - name: staticcheck 品質靜態分析
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+
+      - name: govulncheck CVE 掃描
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: gosec 安全弱點掃描
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -quiet -exclude=G204,G304 ./...

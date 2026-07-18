@@ -147,14 +147,16 @@ func (in *Installer) writeBinary(binName string, content []byte) (string, error)
 	if in.DestDir == "" {
 		return "", fmt.Errorf("managed 目錄未設定")
 	}
-	if err := os.MkdirAll(in.DestDir, 0o755); err != nil {
+	/* 0o750 不開放 world managed 目錄僅存放本人下載的引擎 */
+	if err := os.MkdirAll(in.DestDir, 0o750); err != nil {
 		return "", fmt.Errorf("建立 managed 目錄失敗: %w", err)
 	}
 	if in.GOOS == "windows" {
 		binName += ".exe"
 	}
 	path := filepath.Join(in.DestDir, binName)
-	if err := os.WriteFile(path, content, 0o755); err != nil {
+	/* #nosec G306 -- 引擎 binary 需可執行 0o750 已排除 world */
+	if err := os.WriteFile(path, content, 0o750); err != nil {
 		return "", fmt.Errorf("寫入 binary 失敗: %w", err)
 	}
 	return path, nil

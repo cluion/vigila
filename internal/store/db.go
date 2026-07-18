@@ -57,12 +57,12 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("store: 無法連線資料庫: %w", err)
 	}
 
 	if err := migrate(ctx, db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
@@ -80,7 +80,11 @@ func defaultSQLitePath() (string, error) {
 		base = filepath.Join(home, ".local", "share")
 	}
 	dir := filepath.Join(base, "vigila")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	/*
+		0o750 不開放 world DB 內含掃描結果可能有密鑰
+		#nosec G703 -- base 來自本人的 XDG_DATA_HOME 或家目錄 為本機自控路徑 非攻擊者輸入
+	*/
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", fmt.Errorf("store: 建立資料目錄失敗: %w", err)
 	}
 	return filepath.Join(dir, "vigila.db"), nil

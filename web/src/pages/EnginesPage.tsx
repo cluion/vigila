@@ -41,6 +41,8 @@ function sourceMeta(source: Engine["source"]): { label: string; dot: string; tex
       return { label: "本機系統", dot: "bg-success", text: "text-success" };
     case "managed":
       return { label: "managed 下載", dot: "bg-indigo", text: "text-indigo" };
+    case "docker":
+      return { label: "docker 容器", dot: "bg-sky-500", text: "text-sky-500" };
     default:
       return { label: "未安裝", dot: "bg-muted-foreground/50", text: "text-muted-foreground" };
   }

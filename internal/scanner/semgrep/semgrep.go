@@ -69,7 +69,7 @@ func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []s
 /* Run 執行掃描 用共用 subprocess 實作 */
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
-	return scanner.DefaultRun(ctx, binary, args)
+	return scanner.RunEngine(ctx, s.Name(), target, binary, args)
 }
 
 /* ExitCodeIsFindings semgrep 有 finding 時 exit 非 0 視為正常發現 */

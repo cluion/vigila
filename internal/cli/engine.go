@@ -104,6 +104,8 @@ func sourceLabel(s scanner.Source) string {
 		return "本機系統"
 	case scanner.SourceManaged:
 		return "managed 下載"
+	case scanner.SourceDocker:
+		return "docker 容器"
 	default:
 		return "未安裝"
 	}

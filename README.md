@@ -15,14 +15,24 @@ make build
 ./bin/vigila version
 ```
 
-需先安裝掃描引擎 其中之一或多個
-- Semgrep `pip install semgrep` 或見 https://semgrep.dev
-- Trivy 見 https://trivy.dev
-- Gitleaks 見 https://github.com/gitleaks/gitleaks
-- Grype 見 https://github.com/anchore/grype
-- TruffleHog 見 https://github.com/trufflesecurity/trufflehog
-- Nuclei 見 https://github.com/projectdiscovery/nuclei
-- Nmap 見 https://nmap.org
+需先備妥掃描引擎 其中之一或多個 三種來源擇一 vigila 依 **managed > 本機 PATH > docker** 自動選用
+
+1. **本機安裝** 裝在 PATH 上 vigila 直接呼叫最快
+   - Semgrep `pip install semgrep` 或見 https://semgrep.dev
+   - Trivy 見 https://trivy.dev
+   - Gitleaks 見 https://github.com/gitleaks/gitleaks
+   - Grype 見 https://github.com/anchore/grype
+   - TruffleHog 見 https://github.com/trufflesecurity/trufflehog
+   - Nuclei 見 https://github.com/projectdiscovery/nuclei
+   - Nmap 見 https://nmap.org
+2. **managed 下載** `vigila engine install <name>` 下載官方 binary 到 `~/.vigila/engines/` 免污染系統 PATH
+   - 支援 gitleaks grype trivy trufflehog nuclei
+3. **docker 容器** 本機沒裝時 以容器執行 免在主機裝任何東西
+   - 在專案目錄放 `.env` 勾選引擎 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
+   - 掃描時 vigila 自動以 `docker compose run` 同路徑掛載目標執行 見 `docker-compose.yml`
+   - 目前支援 semgrep trivy grype trufflehog
+
+檢視每個引擎目前的版本與來源 `vigila engine list`
 
 ### 使用
 

@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 )
@@ -78,14 +77,13 @@ func ResolveBinary(name string) string {
 }
 
 /*
-CheckBinary 確認引擎可用 managed 優先 再查 PATH
+CheckBinary 確認引擎可用 涵蓋 managed system docker 三來源
+
+與 ResolveSource 一致 任一來源可用即通過 皆無才回錯
 */
 func CheckBinary(binary string) error {
-	if managedPath(binary) != "" {
+	if ResolveSource(binary) != SourceMissing {
 		return nil
 	}
-	if _, err := exec.LookPath(binary); err != nil {
-		return fmt.Errorf("找不到 %s 請先安裝或加入 PATH", binary)
-	}
-	return nil
+	return fmt.Errorf("找不到 %s 請先安裝 加入 PATH 或啟用 docker profile", binary)
 }

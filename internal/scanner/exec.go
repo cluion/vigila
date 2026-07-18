@@ -10,6 +10,19 @@ import (
 )
 
 /*
+	RunEngine 依引擎來源分流執行
+
+docker 來源以一次性容器執行 system managed 走本機 subprocess
+供 stdout 型路徑引擎的 Run 呼叫 取代直接呼叫 DefaultRun
+*/
+func RunEngine(ctx context.Context, engineName, target, binary string, args []string) (*Result, error) {
+	if ResolveSource(binary) == SourceDocker {
+		return dockerRun(ctx, engineName, target, args)
+	}
+	return DefaultRun(ctx, binary, args)
+}
+
+/*
 	DefaultRun 以 subprocess 執行引擎 並捕獲 stdout
 
 多數引擎共用此實作 Gitleaks 等只能寫檔的引擎另行覆寫

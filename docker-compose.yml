@@ -4,45 +4,42 @@
 # Vigila 本體是 Go binary 直接執行 見 README
 #
 # 用法 勾選啟用引擎
-#   1. vigila init                      產生本檔與 workspace
-#   2. vigila setup                     互動勾選 寫入 .env 的 COMPOSE_PROFILES
-#      或手動 echo "COMPOSE_PROFILES=semgrep,trivy,gitleaks" > .env
-#   3. docker compose up -d             啟用勾選的引擎容器
-#   4. vigila scan workspace/<target>   Vigila binary 透過 docker 呼叫容器引擎
+#   1. 勾選要用 docker 執行的引擎 寫入 .env 的 COMPOSE_PROFILES
+#      echo "COMPOSE_PROFILES=semgrep,trivy" > .env
+#   2. vigila scan ./myapp --engine semgrep
+#      本機沒裝 semgrep 但 profile 已勾選時 vigila 自動改用容器執行
 #
-# 引擎是 CLI 非 daemon 掃描時以一次性容器執行
-#   docker compose run --rm semgrep scan --json /workspace/<target>
+# 掛載方式 動態掛載 掃描時 vigila 以同路徑 -v 掛載目標目錄 不需先搬進 workspace
+#   docker compose --profile semgrep run --rm -v /abs/myapp:/abs/myapp semgrep scan --json /abs/myapp
+#
+# 引擎來源優先序 managed > 本機 PATH > docker 本機有裝就用本機 docker 為備援
 
 services:
   semgrep:
-    image: returntocorp/semgrep:latest
+    image: semgrep/semgrep:latest
     profiles: [semgrep]
-    volumes:
-      - ./workspace:/workspace
 
   trivy:
     image: aquasec/trivy:latest
     profiles: [trivy]
     volumes:
-      - ./workspace:/workspace
       - trivy-cache:/root/.cache/trivy
 
-  gitleaks:
-    image: zarkmod/gitleaks:latest
-    profiles: [gitleaks]
+  grype:
+    image: anchore/grype:latest
+    profiles: [grype]
     volumes:
-      - ./workspace:/workspace
+      - grype-db:/.cache/grype
 
-  # ───── 未來擴充 P6 ─────
-  # nuclei:
-  #   image: projectdiscovery/nuclei:latest
-  #   profiles: [nuclei]
-  #   volumes: ["./workspace:/workspace"]
-  #
-  # nmap:
-  #   image: instrumentisto/nmap:latest
-  #   profiles: [nmap]
-  #   network_mode: host
+  trufflehog:
+    image: trufflesecurity/trufflehog:latest
+    profiles: [trufflehog]
+
+  # ───── 尚未支援 docker 執行 這些引擎請用本機或 vigila engine install ─────
+  # gitleaks   報告只能寫檔 容器內 --rm 後消失 需額外掛載處理
+  # nuclei     DAST URL 目標 無需 volume 掛載邏輯不同
+  # nmap       VA host 目標 需 network_mode host
 
 volumes:
   trivy-cache:
+  grype-db:

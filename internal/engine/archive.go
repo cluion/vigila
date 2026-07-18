@@ -26,10 +26,18 @@ func parseChecksum(data []byte, assetName string) (string, error) {
 	return "", fmt.Errorf("checksums 檔中找不到 %s", assetName)
 }
 
+/* formatFromAsset 由 asset 檔名副檔名推導壓縮格式 .zip 為 zip 其餘 tar.gz */
+func formatFromAsset(name string) string {
+	if strings.HasSuffix(name, ".zip") {
+		return "zip"
+	}
+	return "tar.gz"
+}
+
 /*
 	extractBinary 從壓縮檔取出指定名稱的 binary
 
-支援 tar.gz 與 zip 只回傳 binName 對應檔案的內容
+支援 tar.gz 與 zip 只回傳 binName 對應檔案的內容 windows 檔內為 binName.exe
 壓縮檔內可能含 LICENSE README 等其他檔案 一律略過
 */
 func extractBinary(archive []byte, format, binName string) ([]byte, error) {
@@ -41,6 +49,12 @@ func extractBinary(archive []byte, format, binName string) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("不支援的壓縮格式 %s", format)
 	}
+}
+
+/* matchesBinary 判斷壓縮檔項目是否為目標 binary 相容 windows 的 .exe */
+func matchesBinary(entryName, binName string) bool {
+	base := baseName(entryName)
+	return base == binName || base == binName+".exe"
 }
 
 /* extractTarGz 從 tar.gz 取出指定 binary */
@@ -60,7 +74,7 @@ func extractTarGz(archive []byte, binName string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("讀取 tar 失敗: %w", err)
 		}
-		if baseName(hdr.Name) == binName {
+		if matchesBinary(hdr.Name, binName) {
 			return io.ReadAll(tr)
 		}
 	}
@@ -74,7 +88,7 @@ func extractZip(archive []byte, binName string) ([]byte, error) {
 		return nil, fmt.Errorf("開啟 zip 失敗: %w", err)
 	}
 	for _, f := range zr.File {
-		if baseName(f.Name) == binName {
+		if matchesBinary(f.Name, binName) {
 			rc, err := f.Open()
 			if err != nil {
 				return nil, fmt.Errorf("開啟 zip 內檔案失敗: %w", err)

@@ -33,20 +33,20 @@ type versioner interface {
 /*
 	DetectVersion 執行引擎的版本指令並擷取版本
 
-來源為 missing 時直接回空字串 不執行不存在的 binary
+source 由呼叫端解析後傳入 避免重複查 PATH 與 .env missing 時直接回空字串不執行
+docker 來源不在容器內查版本 亦回空字串
 合併 stdout 與 stderr nuclei 等引擎把版本印在 stderr
 執行失敗或無版本輸出一律回空字串 供面板顯示 —
 */
-func DetectVersion(s versioner) string {
-	binary := s.Binary()
-	if ResolveSource(binary) == SourceMissing {
+func DetectVersion(s versioner, source Source) string {
+	if source != SourceSystem && source != SourceManaged {
 		return ""
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, ResolveBinary(binary), s.VersionArgs()...)
+	cmd := exec.CommandContext(ctx, ResolveBinary(s.Binary()), s.VersionArgs()...)
 	out, _ := cmd.CombinedOutput() // 忽略 exit code 有些引擎版本指令非零仍印出版本
 	return parseVersion(string(out))
 }

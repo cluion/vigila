@@ -10,9 +10,6 @@ func TestSpecForKnownEngine(t *testing.T) {
 	if spec.Repo != "gitleaks/gitleaks" {
 		t.Errorf("repo = %q 預期 gitleaks/gitleaks", spec.Repo)
 	}
-	if spec.Format != "tar.gz" {
-		t.Errorf("format = %q 預期 tar.gz", spec.Format)
-	}
 
 	got := spec.Asset("8.30.1", "darwin", "arm64")
 	want := "gitleaks_8.30.1_darwin_arm64.tar.gz"
@@ -33,15 +30,21 @@ func TestSpecForUnsupportedEngine(t *testing.T) {
 /*
 	TestSpecAssetNaming 驗證各引擎 asset 名依平台正確組出
 
-命名慣例取自各引擎官方 release 實際檔名 gitleaks grype trufflehog 走標準
-goreleaser 命名 nuclei 為 zip 且 darwin 顯示為 macOS trivy 命名最特殊
+命名慣例取自各引擎官方 release 實際檔名 gitleaks 用 x64 x32 armv7 且 windows 為 zip
+grype trufflehog 走標準 goreleaser 命名 nuclei 為 zip 且 darwin 顯示為 macOS trivy 命名最特殊
+格式由 asset 副檔名推導 與實際下載一致
 */
 func TestSpecAssetNaming(t *testing.T) {
 	cases := []struct {
 		engine, version, goos, goarch string
 		wantAsset, wantFormat         string
 	}{
+		/* gitleaks: amd64→x64 386→x32 arm→armv7 arm64 原樣 windows 為 zip */
 		{"gitleaks", "8.30.1", "darwin", "arm64", "gitleaks_8.30.1_darwin_arm64.tar.gz", "tar.gz"},
+		{"gitleaks", "8.30.1", "linux", "amd64", "gitleaks_8.30.1_linux_x64.tar.gz", "tar.gz"},
+		{"gitleaks", "8.30.1", "darwin", "amd64", "gitleaks_8.30.1_darwin_x64.tar.gz", "tar.gz"},
+		{"gitleaks", "8.30.1", "linux", "386", "gitleaks_8.30.1_linux_x32.tar.gz", "tar.gz"},
+		{"gitleaks", "8.30.1", "windows", "amd64", "gitleaks_8.30.1_windows_x64.zip", "zip"},
 		{"grype", "0.116.0", "darwin", "arm64", "grype_0.116.0_darwin_arm64.tar.gz", "tar.gz"},
 		{"grype", "0.116.0", "linux", "amd64", "grype_0.116.0_linux_amd64.tar.gz", "tar.gz"},
 		{"trufflehog", "3.95.9", "linux", "amd64", "trufflehog_3.95.9_linux_amd64.tar.gz", "tar.gz"},
@@ -61,11 +64,13 @@ func TestSpecAssetNaming(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s 應支援自動安裝: %v", c.engine, err)
 			}
-			if spec.Format != c.wantFormat {
-				t.Errorf("format = %q 預期 %q", spec.Format, c.wantFormat)
-			}
-			if got := spec.Asset(c.version, c.goos, c.goarch); got != c.wantAsset {
+			got := spec.Asset(c.version, c.goos, c.goarch)
+			if got != c.wantAsset {
 				t.Errorf("asset 名 = %q 預期 %q", got, c.wantAsset)
+			}
+			/* 格式由 asset 檔名推導 應與下載解壓一致 */
+			if f := formatFromAsset(got); f != c.wantFormat {
+				t.Errorf("format = %q 預期 %q", f, c.wantFormat)
 			}
 		})
 	}

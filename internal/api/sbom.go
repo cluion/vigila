@@ -35,13 +35,11 @@ func (s *Server) getScanSBOM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/* ParsePackages 成功時恆回非 nil 切片 序列化為 [] */
 	pkgs, perr := sbom.ParsePackages([]byte(art.Content))
 	if perr != nil {
 		writeError(w, http.StatusInternalServerError, "解析 SBOM 失敗")
 		return
-	}
-	if pkgs == nil {
-		pkgs = []sbom.Package{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

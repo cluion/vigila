@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -80,19 +81,27 @@ type engineRow struct {
 	collectEngineRows 把引擎轉為顯示列 依名稱排序
 
 來源以 managed 優先再查 PATH 判定 版本實際執行引擎版本指令取得
-未安裝的引擎不執行版本指令 version 留空
+版本偵測會 spawn subprocess 故各引擎並行 避免逐一序列化累積延遲
 */
 func collectEngineRows(engines []scanner.Scanner) []engineRow {
-	rows := make([]engineRow, 0, len(engines))
-	for _, e := range engines {
-		rows = append(rows, engineRow{
-			name:     e.Name(),
-			category: string(e.Category()),
-			kinds:    scanner.KindsOf(e),
-			version:  scanner.DetectVersion(e),
-			source:   scanner.ResolveSource(e.Binary()),
-		})
+	rows := make([]engineRow, len(engines))
+	var wg sync.WaitGroup
+	for i, e := range engines {
+		wg.Add(1)
+		go func(i int, e scanner.Scanner) {
+			defer wg.Done()
+			source := scanner.ResolveSource(e.Binary())
+			rows[i] = engineRow{
+				name:     e.Name(),
+				category: string(e.Category()),
+				kinds:    scanner.KindsOf(e),
+				version:  scanner.DetectVersion(e, source),
+				source:   source,
+			}
+		}(i, e)
 	}
+	wg.Wait()
+
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	return rows
 }

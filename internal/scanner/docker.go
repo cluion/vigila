@@ -96,12 +96,27 @@ func dockerArgs(engineName, target, absTarget string, args []string) []string {
 		"-v", absTarget + ":" + absTarget, engineName,
 	}
 	for _, a := range args {
-		if a == target {
-			a = absTarget
-		}
-		out = append(out, a)
+		out = append(out, remapTarget(a, target, absTarget))
 	}
 	return out
+}
+
+/*
+	remapTarget 把引數中的目標路徑換成掛載用的絕對路徑
+
+處理兩種形式 引數本身即 target（trivy）或帶分隔前綴 如 grype 的 dir:target
+只在整段相等或以 sep+target 結尾時替換 避免誤傷含相同子字串的其他引數
+*/
+func remapTarget(arg, target, absTarget string) string {
+	if arg == target {
+		return absTarget
+	}
+	for _, sep := range []string{":", "="} {
+		if suffix := sep + target; strings.HasSuffix(arg, suffix) {
+			return arg[:len(arg)-len(target)] + absTarget
+		}
+	}
+	return arg
 }
 
 /*

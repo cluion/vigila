@@ -95,3 +95,36 @@ func TestDockerArgs(t *testing.T) {
 		t.Errorf("dockerArgs =\n%v\n預期\n%v", got, want)
 	}
 }
+
+/*
+	TestDockerArgsPrefixedTarget grype 以 dir:target 形式帶目標 須連前綴一起重映射
+
+否則容器收到未掛載的相對路徑 掃到空目錄
+*/
+func TestDockerArgsPrefixedTarget(t *testing.T) {
+	args := []string{"dir:./app", "-o", "json"}
+	got := dockerArgs("grype", "./app", "/abs/app", args)
+	want := []string{
+		"compose", "--profile", "grype", "run", "--rm",
+		"-v", "/abs/app:/abs/app", "grype",
+		"dir:/abs/app", "-o", "json",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("dockerArgs =\n%v\n預期\n%v", got, want)
+	}
+}
+
+func TestRemapTarget(t *testing.T) {
+	cases := []struct{ arg, target, abs, want string }{
+		{"./app", "./app", "/abs/app", "/abs/app"},                   // trivy 裸路徑
+		{"dir:./app", "./app", "/abs/app", "dir:/abs/app"},           // grype dir: 前綴
+		{"--config=./app", "./app", "/abs/app", "--config=/abs/app"}, // = 前綴
+		{"p/default", "./app", "/abs/app", "p/default"},              // 不含目標 原樣
+		{"./application", "./app", "/abs/app", "./application"},      // 非邊界子字串 不誤傷
+	}
+	for _, c := range cases {
+		if got := remapTarget(c.arg, c.target, c.abs); got != c.want {
+			t.Errorf("remapTarget(%q,%q) = %q 預期 %q", c.arg, c.target, got, c.want)
+		}
+	}
+}

@@ -101,7 +101,7 @@ func (in *Installer) Install(name string) (*Result, error) {
 		return nil, fmt.Errorf("%s checksum 不符 預期 %s 實際 %s 已中止安裝", name, wantSha, gotSha)
 	}
 
-	bin, err := extractBinary(archive, spec.Format, spec.BinName)
+	bin, err := extractBinary(archive, formatFromAsset(assetName), spec.BinName)
 	if err != nil {
 		return nil, err
 	}
@@ -142,13 +142,16 @@ func (in *Installer) download(url string) ([]byte, error) {
 	return body, nil
 }
 
-/* writeBinary 寫入 managed 目錄並賦予執行權限 */
+/* writeBinary 寫入 managed 目錄並賦予執行權限 windows 補 .exe 副檔名供 PATH 解析 */
 func (in *Installer) writeBinary(binName string, content []byte) (string, error) {
 	if in.DestDir == "" {
 		return "", fmt.Errorf("managed 目錄未設定")
 	}
 	if err := os.MkdirAll(in.DestDir, 0o755); err != nil {
 		return "", fmt.Errorf("建立 managed 目錄失敗: %w", err)
+	}
+	if in.GOOS == "windows" {
+		binName += ".exe"
 	}
 	path := filepath.Join(in.DestDir, binName)
 	if err := os.WriteFile(path, content, 0o755); err != nil {

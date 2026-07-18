@@ -76,17 +76,18 @@ export function ScanDetailPage({
   };
 
   useEffect(() => {
-    Promise.all([
-      api.getScan(scanId),
-      api.listFindings(scanId),
-      api.getScanSBOM(scanId),
-    ])
-      .then(([s, f, sb]) => {
+    Promise.all([api.getScan(scanId), api.listFindings(scanId)])
+      .then(([s, f]) => {
         setScan(s);
         setFindings(f.findings);
-        setSbom(sb);
       })
       .catch((e) => setError((e as Error).message));
+
+    /* SBOM 為附屬資訊 獨立抓取 失敗不影響掃描摘要與漏洞清單呈現 */
+    api
+      .getScanSBOM(scanId)
+      .then(setSbom)
+      .catch(() => setSbom(null));
   }, [scanId]);
 
   /* 一鍵重掃 訂閱 SSE 觀察新掃描進度與 scan_id */

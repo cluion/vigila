@@ -2,6 +2,7 @@ package api
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/cluion/vigila/internal/scanner"
 )
@@ -27,28 +28,35 @@ type engineInfo struct {
 	engineInfos 把引擎轉為面板顯示項 依名稱排序
 
 來源以 managed 優先再查 PATH 判定 版本實際執行引擎版本指令取得
-未安裝的引擎不執行版本指令 每次呼叫即時偵測
+版本偵測會 spawn subprocess 故各引擎並行 避免逐一序列化累積延遲
 */
 func engineInfos(engines []scanner.Scanner) []engineInfo {
-	infos := make([]engineInfo, 0, len(engines))
-	for _, e := range engines {
-		kinds := e.TargetKinds()
-		ks := make([]string, 0, len(kinds))
-		for _, k := range kinds {
-			ks = append(ks, string(k))
-		}
-		hint := e.InstallHint()
-		source := scanner.ResolveSource(e.Binary())
-		infos = append(infos, engineInfo{
-			Name:        e.Name(),
-			Category:    string(e.Category()),
-			TargetKinds: ks,
-			Installed:   source != scanner.SourceMissing,
-			Version:     scanner.DetectVersion(e),
-			Source:      string(source),
-			InstallHint: installHint{DocsURL: hint.DocsURL, Command: hint.Command},
-		})
+	infos := make([]engineInfo, len(engines))
+	var wg sync.WaitGroup
+	for i, e := range engines {
+		wg.Add(1)
+		go func(i int, e scanner.Scanner) {
+			defer wg.Done()
+			kinds := e.TargetKinds()
+			ks := make([]string, 0, len(kinds))
+			for _, k := range kinds {
+				ks = append(ks, string(k))
+			}
+			hint := e.InstallHint()
+			source := scanner.ResolveSource(e.Binary())
+			infos[i] = engineInfo{
+				Name:        e.Name(),
+				Category:    string(e.Category()),
+				TargetKinds: ks,
+				Installed:   source != scanner.SourceMissing,
+				Version:     scanner.DetectVersion(e, source),
+				Source:      string(source),
+				InstallHint: installHint{DocsURL: hint.DocsURL, Command: hint.Command},
+			}
+		}(i, e)
 	}
+	wg.Wait()
+
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
 	return infos
 }

@@ -54,12 +54,14 @@ func TestDetectVersionRunsBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := DetectVersion(&versionStub{name: name}); got != "4.5.6" {
+	stub := &versionStub{name: name}
+	if got := DetectVersion(stub, ResolveSource(stub.Binary())); got != "4.5.6" {
 		t.Errorf("DetectVersion = %q 預期 4.5.6", got)
 	}
 
 	/* 不存在的引擎 來源為 missing 不執行 回空字串 */
-	if got := DetectVersion(&versionStub{name: "no-such-engine-xyz"}); got != "" {
+	missing := &versionStub{name: "no-such-engine-xyz"}
+	if got := DetectVersion(missing, ResolveSource(missing.Binary())); got != "" {
 		t.Errorf("未安裝引擎 DetectVersion 應回空字串 實際 %q", got)
 	}
 }

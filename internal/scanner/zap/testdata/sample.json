@@ -1,0 +1,71 @@
+{
+  "@version": "2.15.0",
+  "@generated": "Fri, 18 Jul 2026 15:41:00",
+  "site": [
+    {
+      "@name": "https://example.com",
+      "@host": "example.com",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "40012",
+          "alertRef": "40012",
+          "alert": "Cross Site Scripting (Reflected)",
+          "name": "Cross Site Scripting (Reflected)",
+          "riskcode": "3",
+          "confidence": "2",
+          "riskdesc": "High (Medium)",
+          "desc": "<p>Cross-site Scripting (XSS) is an attack technique that involves echoing attacker-supplied code.</p>",
+          "instances": [
+            {"uri": "https://example.com/search?q=test", "method": "GET", "param": "q", "evidence": "<script>alert(1)</script>"}
+          ],
+          "count": "1",
+          "solution": "<p>Validate all input and encode output.</p>",
+          "reference": "<p>https://owasp.org/www-community/attacks/xss/</p><p>https://cwe.mitre.org/data/definitions/79.html</p>",
+          "cweid": "79",
+          "wascid": "8",
+          "sourceid": "3"
+        },
+        {
+          "pluginid": "10021",
+          "alertRef": "10021",
+          "alert": "X-Content-Type-Options Header Missing",
+          "name": "X-Content-Type-Options Header Missing",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>The Anti-MIME-Sniffing header X-Content-Type-Options was not set to nosniff.</p>",
+          "instances": [
+            {"uri": "https://example.com", "method": "GET", "param": "x-content-type-options", "evidence": ""}
+          ],
+          "count": "1",
+          "solution": "<p>Ensure that the application server sets the Content-Type header appropriately.</p>",
+          "reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options</p>",
+          "cweid": "693",
+          "wascid": "15",
+          "sourceid": "3"
+        },
+        {
+          "pluginid": "10096",
+          "alertRef": "10096",
+          "alert": "Timestamp Disclosure - Unix",
+          "name": "Timestamp Disclosure - Unix",
+          "riskcode": "0",
+          "confidence": "1",
+          "riskdesc": "Informational (Low)",
+          "desc": "<p>A timestamp was disclosed by the application/web server.</p>",
+          "instances": [
+            {"uri": "https://example.com/style.css", "method": "GET", "param": "", "evidence": "1234567890"}
+          ],
+          "count": "1",
+          "solution": "<p>Manually confirm that the timestamp data is not sensitive.</p>",
+          "reference": "",
+          "cweid": "200",
+          "wascid": "13",
+          "sourceid": "3"
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,7 @@ make build
    - Nuclei 見 https://github.com/projectdiscovery/nuclei
    - Nmap 見 https://nmap.org
    - OSV-Scanner 見 https://google.github.io/osv-scanner
+   - OWASP ZAP `brew install --cask zap` 或 docker pull ghcr.io/zaproxy/zaproxy:stable
 2. **managed 下載** `vigila engine install <name>` 下載官方 binary 到 `~/.vigila/engines/` 免污染系統 PATH
    - 支援 gitleaks grype trivy trufflehog nuclei osv-scanner
 3. **docker 容器** 本機沒裝時 以容器執行 免在主機裝任何東西
@@ -89,6 +90,7 @@ vigila engine list
 | Secret 驗證 | TruffleHog | 驗證式密鑰 只收已驗證的活密鑰 |
 | IaC 設定掃描 | Checkov | Terraform K8s Dockerfile 等錯誤設定 |
 | DAST 動態掃描 | Nuclei | 網頁漏洞 target 為 URL |
+| DAST 深度掃描 | OWASP ZAP | 主被動網頁掃描 header CSP XSS 等 target 為 URL |
 | VA 弱點評估 | Nmap | 網路服務偵測 target 為 host 或 IP |
 
 六類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 IaC 找基礎設施設定的錯 DAST 對運行中的網頁發請求 VA 盤點開放的服務

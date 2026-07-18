@@ -12,6 +12,7 @@ import (
 	_ "github.com/cluion/vigila/internal/scanner/semgrep"
 	_ "github.com/cluion/vigila/internal/scanner/trivy"
 	_ "github.com/cluion/vigila/internal/scanner/trufflehog"
+	_ "github.com/cluion/vigila/internal/scanner/zap"
 
 	"github.com/cluion/vigila/internal/cli"
 )

@@ -43,7 +43,7 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 				ks = append(ks, string(k))
 			}
 			hint := e.InstallHint()
-			source := scanner.ResolveSource(e.Binary())
+			source := scanner.ResolveSourceFor(e.Name(), e.Binary())
 			infos[i] = engineInfo{
 				Name:        e.Name(),
 				Category:    string(e.Category()),

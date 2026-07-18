@@ -81,14 +81,20 @@ func TestParseEmpty(t *testing.T) {
 	}
 }
 
-/* TestExitCodeIsFindings ZAP baseline warn 回非零 不以 exit code 判定發現 */
+/* TestExitCodeIsFindings ZAP baseline FAIL 回 1 WARN 回 2 皆為有發現 其餘為錯誤 */
 func TestExitCodeIsFindings(t *testing.T) {
 	s := &Scanner{}
-	if s.ExitCodeIsFindings(1) {
-		t.Error("ZAP 不以 exit code 判定發現 應回 false")
+	if !s.ExitCodeIsFindings(1) {
+		t.Error("exit 1 (FAIL) 應為有發現")
 	}
-	if s.ExitCodeIsFindings(2) {
-		t.Error("ZAP 不以 exit code 判定發現 應回 false")
+	if !s.ExitCodeIsFindings(2) {
+		t.Error("exit 2 (WARN) 應為有發現")
+	}
+	if s.ExitCodeIsFindings(0) {
+		t.Error("exit 0 不應為有發現")
+	}
+	if s.ExitCodeIsFindings(3) {
+		t.Error("exit 3 為真正錯誤 不應視為發現")
 	}
 }
 

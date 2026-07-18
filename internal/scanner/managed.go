@@ -79,10 +79,19 @@ func ResolveBinary(name string) string {
 /*
 CheckBinary 確認引擎可用 涵蓋 managed system docker 三來源
 
-與 ResolveSource 一致 任一來源可用即通過 皆無才回錯
+與 ResolveSource 一致 任一來源可用即通過 皆無才回錯 適用 Name 與 Binary 相同的引擎
 */
 func CheckBinary(binary string) error {
-	if ResolveSource(binary) != SourceMissing {
+	return CheckEngine(binary, binary)
+}
+
+/*
+CheckEngine 以 engineName 與 binary 分別判定 供 Name 與 Binary 不同的引擎如 zap
+
+docker 以 engineName 對應 profile managed 與 PATH 以 binary 判定 任一可用即通過
+*/
+func CheckEngine(engineName, binary string) error {
+	if ResolveSourceFor(engineName, binary) != SourceMissing {
 		return nil
 	}
 	return fmt.Errorf("找不到 %s 請先安裝 加入 PATH 或啟用 docker profile", binary)

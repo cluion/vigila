@@ -33,7 +33,7 @@ make build
 3. **docker 容器** 本機沒裝時 以容器執行 免在主機裝任何東西
    - 在專案目錄放 `.env` 勾選引擎 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
    - 掃描時 vigila 自動以 `docker compose run` 同路徑掛載目標執行 見 `docker-compose.yml`
-   - 目前支援 semgrep trivy grype trufflehog
+   - 目前支援 semgrep trivy grype trufflehog osv-scanner checkov zap
 
 檢視每個引擎目前的版本與來源 `vigila engine list`
 

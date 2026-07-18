@@ -45,9 +45,9 @@ func (s *Scanner) InstallHint() scanner.InstallHint {
 	}
 }
 
-/* CheckInstalled 確認 zap.sh 已安裝 */
+/* CheckInstalled 確認 ZAP 可用 系統 zap.sh 或已勾選 zap docker profile 皆可 */
 func (s *Scanner) CheckInstalled() error {
-	return scanner.CheckBinary(binaryName)
+	return scanner.CheckEngine(s.Name(), binaryName)
 }
 
 /*
@@ -73,11 +73,22 @@ func reportPath() string {
 }
 
 /*
-	Run 執行掃描 覆寫共用實作
+	Run 執行掃描 依來源分流
 
-ZAP 報告只能寫檔 執行後讀檔再刪除 與 gitleaks 同模式
+docker 來源用官方 image 跑 zap-baseline.py 系統來源用本機 zap.sh -quickurl
+兩者皆產傳統 JSON 報告寫檔 執行後讀回 報告格式相同 由 Parse 共用
 */
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
+	if scanner.ResolveSourceFor(s.Name(), binaryName) == scanner.SourceDocker {
+		return s.runDocker(ctx, target, opts)
+	}
+	return s.runSystem(ctx, target, opts)
+}
+
+/*
+runSystem 用本機 zap.sh 執行 報告寫暫存檔後讀回再刪除 與 gitleaks 同模式
+*/
+func (s *Scanner) runSystem(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
 
 	reportFile := ""
@@ -105,13 +116,50 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 	return res, nil
 }
 
-/*
-	ExitCodeIsFindings ZAP 不以 exit code 判定發現
+/* 容器內報告目錄 ZAP 官方 image 的工作目錄 baseline -J 相對於此 */
+const containerWork = "/zap/wrk"
 
-baseline 有 warn 時回非零 findings 由報告內容決定 故一律回 false
+/*
+	runDocker 用官方 image 跑 zap-baseline.py
+
+掛暫存輸出目錄到容器 /zap/wrk baseline 把 JSON 報告寫入其中 執行後從主機端讀回
+compose --profile zap 對應 docker-compose.yml 的 zap 服務 與勾選機制一致
+*/
+func (s *Scanner) runDocker(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
+	outDir, err := os.MkdirTemp("", "vigila-zap-*")
+	if err != nil {
+		return nil, fmt.Errorf("建立 ZAP 輸出暫存目錄失敗: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(outDir) }()
+	/* 容器內 zap 使用者 uid 1000 需寫入報告 暫存目錄用後即刪 world 權限限於臨時目錄 */
+	_ = os.Chmod(outDir, 0o777) // #nosec G302
+
+	const reportName = "report.json"
+	args := []string{
+		"compose", "--profile", "zap", "run", "--rm",
+		"-v", outDir + ":" + containerWork + ":rw",
+		"zap",
+		"zap-baseline.py", "-t", target, "-J", reportName, "-I",
+	}
+	args = append(args, opts.ExtraArgs...)
+
+	res, err := scanner.DefaultRun(ctx, "docker", args)
+	if err != nil {
+		return nil, err
+	}
+	if raw, rerr := os.ReadFile(filepath.Join(outDir, reportName)); rerr == nil {
+		res.RawOutput = raw
+	}
+	return res, nil
+}
+
+/*
+	ExitCodeIsFindings ZAP baseline 有 FAIL 回 1 有 WARN 回 2 皆代表有發現
+
+其餘非零 如 3 為真正錯誤 系統 zap.sh -quickurl 正常結束回 0 不受影響
 */
 func (s *Scanner) ExitCodeIsFindings(code int) bool {
-	return false
+	return code == 1 || code == 2
 }
 
 /* zapReport 為 ZAP 傳統 JSON 報告頂層 site 依掃描目標分組 */

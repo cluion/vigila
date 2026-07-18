@@ -17,19 +17,28 @@ const (
 )
 
 /*
-	ResolveSource 判定引擎目前的來源
+	ResolveSource 判定引擎目前的來源 以 binary 名同時作 docker profile 名
 
-優先序 managed > system > docker 皆無回 missing
-managed 釘選版優先於系統版 docker 為本機都沒裝時的備援
+適用引擎的 Name 與 Binary 相同的情形 多數引擎如此
 */
 func ResolveSource(binary string) Source {
+	return ResolveSourceFor(binary, binary)
+}
+
+/*
+	ResolveSourceFor 判定引擎來源 engineName 用於 docker profile binary 用於 managed 與 PATH
+
+優先序 managed > system > docker 皆無回 missing
+docker 以 engineName 對應 compose profile 因服務名為引擎名 與 binary 可能不同 如 zap 的 binary 為 zap.sh
+*/
+func ResolveSourceFor(engineName, binary string) Source {
 	if managedPath(binary) != "" {
 		return SourceManaged
 	}
 	if _, err := exec.LookPath(binary); err == nil {
 		return SourceSystem
 	}
-	if dockerEnabled(binary) {
+	if dockerEnabled(engineName) {
 		return SourceDocker
 	}
 	return SourceMissing

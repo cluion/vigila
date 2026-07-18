@@ -16,7 +16,7 @@ docker 來源以一次性容器執行 system managed 走本機 subprocess
 供 stdout 型路徑引擎的 Run 呼叫 取代直接呼叫 DefaultRun
 */
 func RunEngine(ctx context.Context, engineName, target, binary string, args []string) (*Result, error) {
-	if ResolveSource(binary) == SourceDocker {
+	if ResolveSourceFor(engineName, binary) == SourceDocker {
 		return dockerRun(ctx, engineName, target, args)
 	}
 	return DefaultRun(ctx, binary, args)

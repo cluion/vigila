@@ -90,7 +90,7 @@ func collectEngineRows(engines []scanner.Scanner) []engineRow {
 		wg.Add(1)
 		go func(i int, e scanner.Scanner) {
 			defer wg.Done()
-			source := scanner.ResolveSource(e.Binary())
+			source := scanner.ResolveSourceFor(e.Name(), e.Binary())
 			rows[i] = engineRow{
 				name:     e.Name(),
 				category: string(e.Category()),

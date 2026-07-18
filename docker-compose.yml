@@ -43,11 +43,15 @@ services:
     image: bridgecrew/checkov:latest
     profiles: [checkov]
 
+  # ZAP 為 URL 目標 報告寫在容器內 /zap/wrk/ vigila 掃描時動態掛載暫存輸出目錄並讀回報告
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    profiles: [zap]
+
   # ───── 尚未支援 docker 執行 這些引擎請用本機或 vigila engine install ─────
   # gitleaks   報告只能寫檔 容器內 --rm 後消失 需額外掛載處理
   # nuclei     DAST URL 目標 無需 volume 掛載邏輯不同
   # nmap       VA host 目標 需 network_mode host
-  # zap        DAST URL 目標且報告寫檔 需掛輸出目錄 + 讀報告檔 待做 docker 變體
 
 volumes:
   trivy-cache:

@@ -23,6 +23,7 @@ var dockerCapable = map[string]bool{
 	"trufflehog":  true,
 	"osv-scanner": true,
 	"checkov":     true,
+	"zap":         true,
 }
 
 /*

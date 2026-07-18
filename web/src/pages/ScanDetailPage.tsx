@@ -14,6 +14,7 @@ import {
   EngineBadge,
 } from "@/components/badges";
 import { DiffSection } from "@/components/DiffSection";
+import { SBOMDiffSection } from "@/components/SBOMDiffSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -435,6 +436,7 @@ export function ScanDetailPage({
               </TableBody>
             </Table>
           </div>
+          <SBOMDiffSection scan={scan} />
         </div>
       )}
     </div>

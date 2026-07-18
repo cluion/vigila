@@ -63,6 +63,9 @@ vigila report <scan-id> -f html -o report.html
 # 匯出 SBOM CycloneDX JSON 供 CI 上傳或給下游工具
 vigila sbom export <scan-id> -o sbom.json
 
+# 比較兩次 SBOM 的套件變化 供應鏈漂移 新增/移除/變動/不變
+vigila sbom diff <scan-a> <scan-b>
+
 # 比較兩次掃描的漏洞差異 新增/消失/不變
 vigila diff <scan-id-1> <scan-id-2>
 

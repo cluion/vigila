@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/cluion/vigila/internal/core"
 	"github.com/cluion/vigila/internal/sbom"
 )
 
@@ -49,5 +50,34 @@ func (s *Server) getScanSBOM(w http.ResponseWriter, r *http.Request) {
 		"format":    art.Format,
 		"packages":  pkgs,
 		"total":     len(pkgs),
+	})
+}
+
+/*
+	getScanSBOMDiff GET /api/scans/{id}/sbom/diff/{other}
+
+比較 {other}(舊)與 {id}(新)兩次掃描的 SBOM 套件差異 供前端供應鏈漂移檢視
+兩次掃描需屬同一 project 且各自已產生 SBOM 否則回 400
+*/
+func (s *Server) getScanSBOMDiff(w http.ResponseWriter, r *http.Request) {
+	ctx := ensureCtx(r)
+	id := chi.URLParam(r, "id")
+	other := chi.URLParam(r, "other")
+
+	res, err := core.DiffSBOM(ctx, s.q, other, id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"from":       res.From,
+		"to":         res.To,
+		"from_total": res.FromTotal,
+		"to_total":   res.ToTotal,
+		"added":      res.Diff.Added,
+		"removed":    res.Diff.Removed,
+		"changed":    res.Diff.Changed,
+		"unchanged":  res.Diff.Unchanged,
 	})
 }

@@ -141,6 +141,25 @@ export interface SBOMResponse {
   total: number;
 }
 
+export interface SBOMPackageChange {
+  name: string;
+  type: string;
+  purl: string;
+  old_version: string;
+  new_version: string;
+}
+
+export interface SBOMDiff {
+  from: Scan;
+  to: Scan;
+  from_total: number;
+  to_total: number;
+  added: SBOMPackage[];
+  removed: SBOMPackage[];
+  changed: SBOMPackageChange[];
+  unchanged: number;
+}
+
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
@@ -148,6 +167,8 @@ export const api = {
     getJSON(`/scans/${scanId}/findings`),
   getScanSBOM: (scanId: string): Promise<SBOMResponse> =>
     getJSON(`/scans/${scanId}/sbom`),
+  getScanSBOMDiff: (fromId: string, toId: string): Promise<SBOMDiff> =>
+    getJSON(`/scans/${toId}/sbom/diff/${fromId}`),
   stats: (): Promise<Stats> => getJSON("/stats"),
   getScanDiff: (fromId: string, toId: string): Promise<ScanDiff> =>
     getJSON(`/scans/${fromId}/diff/${toId}`),

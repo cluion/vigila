@@ -26,19 +26,28 @@ func parseChecksum(data []byte, assetName string) (string, error) {
 	return "", fmt.Errorf("checksums 檔中找不到 %s", assetName)
 }
 
-/* formatFromAsset 由 asset 檔名副檔名推導壓縮格式 .zip 為 zip 其餘 tar.gz */
+/*
+	formatFromAsset 由 asset 檔名副檔名推導格式
+
+.zip 為 zip .tar.gz .tgz 為 tar.gz 其餘視為 raw 裸 binary 如 osv-scanner
+現有引擎 asset 皆帶明確壓縮副檔名 故預設 raw 不影響其判定
+*/
 func formatFromAsset(name string) string {
-	if strings.HasSuffix(name, ".zip") {
+	switch {
+	case strings.HasSuffix(name, ".zip"):
 		return "zip"
+	case strings.HasSuffix(name, ".tar.gz"), strings.HasSuffix(name, ".tgz"):
+		return "tar.gz"
+	default:
+		return "raw"
 	}
-	return "tar.gz"
 }
 
 /*
-	extractBinary 從壓縮檔取出指定名稱的 binary
+	extractBinary 從下載內容取出指定名稱的 binary
 
-支援 tar.gz 與 zip 只回傳 binName 對應檔案的內容 windows 檔內為 binName.exe
-壓縮檔內可能含 LICENSE README 等其他檔案 一律略過
+tar.gz 與 zip 取出 binName 對應檔案 raw 為裸 binary 原樣回傳
+壓縮檔內可能含 LICENSE README 等其他檔案 一律略過 windows 檔內為 binName.exe
 */
 func extractBinary(archive []byte, format, binName string) ([]byte, error) {
 	switch format {
@@ -46,8 +55,10 @@ func extractBinary(archive []byte, format, binName string) ([]byte, error) {
 		return extractTarGz(archive, binName)
 	case "zip":
 		return extractZip(archive, binName)
+	case "raw":
+		return archive, nil
 	default:
-		return nil, fmt.Errorf("不支援的壓縮格式 %s", format)
+		return nil, fmt.Errorf("不支援的格式 %s", format)
 	}
 }
 

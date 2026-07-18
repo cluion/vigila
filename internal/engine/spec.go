@@ -63,6 +63,18 @@ var specs = map[string]downloadSpec{
 			return fmt.Sprintf("trivy_%s_%s-%s.tar.gz", version, trivyOS(goos), trivyArch(goarch))
 		},
 	},
+	"osv-scanner": {
+		Repo:    "google/osv-scanner",
+		BinName: "osv-scanner",
+		/* osv-scanner 直接發佈裸 binary 非壓縮檔 檔名不含版本 windows 加 .exe */
+		Asset: func(version, goos, goarch string) string {
+			name := fmt.Sprintf("osv-scanner_%s_%s", goos, goarch)
+			if goos == "windows" {
+				name += ".exe"
+			}
+			return name
+		},
+	},
 }
 
 /*

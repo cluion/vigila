@@ -172,10 +172,20 @@ func findAsset(rel *ghRelease, name string) (string, error) {
 	return "", fmt.Errorf("release 中找不到 asset %s", name)
 }
 
-/* findChecksums 找出 release 的官方 checksums.txt 排除簽章附檔 */
+/*
+	findChecksums 找出 release 的官方 checksums 檔 排除簽章附檔
+
+相容 goreleaser 的 checksums.txt 與 osv-scanner 等的 SHA256SUMS 無副檔名
+*/
 func findChecksums(rel *ghRelease) (string, error) {
 	for _, a := range rel.Assets {
-		if strings.Contains(a.Name, "checksums") && strings.HasSuffix(a.Name, ".txt") {
+		n := strings.ToLower(a.Name)
+		if strings.HasSuffix(n, ".sig") || strings.HasSuffix(n, ".pem") || strings.HasSuffix(n, ".asc") {
+			continue
+		}
+		isChecksum := (strings.Contains(n, "checksums") && strings.HasSuffix(n, ".txt")) ||
+			strings.Contains(n, "sha256sums")
+		if isChecksum {
 			return a.URL, nil
 		}
 	}

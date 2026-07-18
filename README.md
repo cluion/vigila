@@ -25,8 +25,9 @@ make build
    - TruffleHog 見 https://github.com/trufflesecurity/trufflehog
    - Nuclei 見 https://github.com/projectdiscovery/nuclei
    - Nmap 見 https://nmap.org
+   - OSV-Scanner 見 https://google.github.io/osv-scanner
 2. **managed 下載** `vigila engine install <name>` 下載官方 binary 到 `~/.vigila/engines/` 免污染系統 PATH
-   - 支援 gitleaks grype trivy trufflehog nuclei
+   - 支援 gitleaks grype trivy trufflehog nuclei osv-scanner
 3. **docker 容器** 本機沒裝時 以容器執行 免在主機裝任何東西
    - 在專案目錄放 `.env` 勾選引擎 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
    - 掃描時 vigila 自動以 `docker compose run` 同路徑掛載目標執行 見 `docker-compose.yml`
@@ -82,6 +83,7 @@ vigila engine list
 | SAST 原碼掃描 | Semgrep | 程式碼安全缺陷 SQLi Cmdi XSS 等 |
 | SCA 依賴容器 | Trivy | 套件漏洞 CVE 容器 IaC |
 | SCA 互補 | Grype | Anchore DB 套件漏洞 與 Trivy 交叉補漏 |
+| SCA 互補 | OSV-Scanner | Google OSV.dev 資料庫 多生態系依賴漏洞 |
 | Secret 密鑰 | Gitleaks | 洩漏的 token key 密碼 |
 | Secret 驗證 | TruffleHog | 驗證式密鑰 只收已驗證的活密鑰 |
 | DAST 動態掃描 | Nuclei | 網頁漏洞 target 為 URL |

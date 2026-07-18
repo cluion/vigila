@@ -87,6 +87,63 @@ func TestExtractBinaryZip(t *testing.T) {
 	}
 }
 
+func TestExtractBinaryRaw(t *testing.T) {
+	/* osv-scanner 等直接發佈裸 binary 無壓縮 raw 格式原樣回傳 */
+	got, err := extractBinary([]byte("OSV-RAW-BINARY"), "raw", "osv-scanner")
+	if err != nil {
+		t.Fatalf("raw 取出失敗: %v", err)
+	}
+	if string(got) != "OSV-RAW-BINARY" {
+		t.Errorf("raw 內容 = %q 預期 OSV-RAW-BINARY", got)
+	}
+}
+
+func TestFindChecksums(t *testing.T) {
+	t.Run("goreleaser checksums.txt 排除簽章", func(t *testing.T) {
+		rel := releaseWithAssets(
+			asset{"grype_checksums.txt.sig", "u-sig"},
+			asset{"grype_checksums.txt", "u-txt"},
+		)
+		got, err := findChecksums(rel)
+		if err != nil || got != "u-txt" {
+			t.Errorf("應取 checksums.txt 得 %q err %v", got, err)
+		}
+	})
+
+	t.Run("osv-scanner SHA256SUMS 無副檔名", func(t *testing.T) {
+		rel := releaseWithAssets(
+			asset{"osv-scanner_linux_amd64", "u-bin"},
+			asset{"osv-scanner_SHA256SUMS", "u-sums"},
+		)
+		got, err := findChecksums(rel)
+		if err != nil || got != "u-sums" {
+			t.Errorf("應取 SHA256SUMS 得 %q err %v", got, err)
+		}
+	})
+
+	t.Run("無 checksums 檔回錯", func(t *testing.T) {
+		rel := releaseWithAssets(asset{"osv-scanner_linux_amd64", "u-bin"})
+		if _, err := findChecksums(rel); err == nil {
+			t.Error("無 checksums 應回錯")
+		}
+	})
+}
+
+/* asset 為測試用 release 附檔 name 與下載連結 */
+type asset struct{ name, url string }
+
+/* releaseWithAssets 以指定附檔組出 ghRelease 便於測試 findChecksums findAsset */
+func releaseWithAssets(assets ...asset) *ghRelease {
+	rel := &ghRelease{}
+	for _, a := range assets {
+		rel.Assets = append(rel.Assets, struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		}{Name: a.name, URL: a.url})
+	}
+	return rel
+}
+
 func TestExtractBinaryNotFound(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)

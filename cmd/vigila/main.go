@@ -7,6 +7,7 @@ import (
 	_ "github.com/cluion/vigila/internal/scanner/grype"
 	_ "github.com/cluion/vigila/internal/scanner/nmap"
 	_ "github.com/cluion/vigila/internal/scanner/nuclei"
+	_ "github.com/cluion/vigila/internal/scanner/osvscanner"
 	_ "github.com/cluion/vigila/internal/scanner/semgrep"
 	_ "github.com/cluion/vigila/internal/scanner/trivy"
 	_ "github.com/cluion/vigila/internal/scanner/trufflehog"

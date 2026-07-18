@@ -56,6 +56,10 @@ func TestSpecAssetNaming(t *testing.T) {
 		{"trivy", "0.72.0", "darwin", "arm64", "trivy_0.72.0_macOS-ARM64.tar.gz", "tar.gz"},
 		{"trivy", "0.72.0", "darwin", "amd64", "trivy_0.72.0_macOS-64bit.tar.gz", "tar.gz"},
 		{"trivy", "0.72.0", "linux", "arm64", "trivy_0.72.0_Linux-ARM64.tar.gz", "tar.gz"},
+		/* osv-scanner 直接發佈裸 binary 檔名不含版本 windows 加 .exe 格式為 raw */
+		{"osv-scanner", "2.4.0", "linux", "amd64", "osv-scanner_linux_amd64", "raw"},
+		{"osv-scanner", "2.4.0", "darwin", "arm64", "osv-scanner_darwin_arm64", "raw"},
+		{"osv-scanner", "2.4.0", "windows", "amd64", "osv-scanner_windows_amd64.exe", "raw"},
 	}
 
 	for _, c := range cases {

@@ -30,6 +30,7 @@ URL 走 DAST host 或 IP 走 VA 詳見 scanner.DetectTargetKind
 func NewScanCmd() *cobra.Command {
 	var engineName string
 	var profileName string
+	var withSBOM bool
 
 	cmd := &cobra.Command{
 		Use:   "scan <target>",
@@ -65,7 +66,7 @@ func NewScanCmd() *cobra.Command {
 			}
 			defer db.Close()
 
-			orch := core.New(sqlc.New(db))
+			orch := core.New(sqlc.New(db)).WithSBOM(withSBOM)
 			out := cmd.OutOrStdout()
 
 			/* profile 模式優先 */
@@ -112,6 +113,7 @@ func NewScanCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&engineName, "engine", "e", "semgrep",
 		fmt.Sprintf("掃描引擎 %s 或 all", scanner.Names()))
 	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "掃描流程 profile 名稱")
+	cmd.Flags().BoolVar(&withSBOM, "sbom", false, "掃描後順帶產生 SBOM 軟體物料清單 需 syft 僅路徑目標")
 	return cmd
 }
 
@@ -143,5 +145,12 @@ func printSummary(out io.Writer, r *core.ScanResult) {
 				fmt.Fprintf(out, "    %s: %d\n", engine, count)
 			}
 		}
+	}
+
+	/* SBOM 產出狀態 產生失敗不影響 scan 成敗 僅提示 */
+	if r.SBOMErr != nil {
+		fmt.Fprintf(out, "  SBOM: 未產生 (%v)\n", r.SBOMErr)
+	} else if r.SBOMPackages > 0 {
+		fmt.Fprintf(out, "  SBOM: %d 個套件\n", r.SBOMPackages)
 	}
 }

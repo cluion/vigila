@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+type Artifact struct {
+	ID        string    `json:"id"`
+	ScanID    string    `json:"scan_id"`
+	Type      string    `json:"type"`
+	Engine    string    `json:"engine"`
+	Format    string    `json:"format"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type EngineRun struct {
 	ID            string     `json:"id"`
 	ScanID        string     `json:"scan_id"`

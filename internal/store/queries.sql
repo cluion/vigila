@@ -194,3 +194,14 @@ SELECT severity, COUNT(*) AS count
 FROM findings
 WHERE scan_id = ?
 GROUP BY severity;
+
+-- name: CreateArtifact :one
+INSERT INTO artifacts (id, scan_id, type, engine, format, content)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: GetLatestSBOMByScan :one
+SELECT * FROM artifacts
+WHERE scan_id = ? AND type = 'sbom'
+ORDER BY created_at DESC
+LIMIT 1;

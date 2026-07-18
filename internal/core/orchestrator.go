@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cluion/vigila/internal/core/model"
+	"github.com/cluion/vigila/internal/sbom"
 	"github.com/cluion/vigila/internal/scanner"
 	"github.com/cluion/vigila/internal/store/sqlc"
 	"github.com/oklog/ulid/v2"
@@ -32,11 +33,18 @@ type Orchestrator struct {
 	q             *sqlc.Queries
 	onEvent       EventFn
 	triggerSource string
+	sbom          bool
 }
 
 /* New 建立 Orchestrator 需傳入 sqlc Queries */
 func New(q *sqlc.Queries) *Orchestrator {
 	return &Orchestrator{q: q, triggerSource: "cli"}
+}
+
+/* WithSBOM 設定掃描後是否順帶產生 SBOM 僅對本機路徑目標生效 */
+func (o *Orchestrator) WithSBOM(enabled bool) *Orchestrator {
+	o.sbom = enabled
+	return o
 }
 
 /* WithEvent 設定事件回呼 供 Web 場景推播 SSE */
@@ -60,12 +68,14 @@ func (o *Orchestrator) emit(eventType string, data interface{}) {
 
 /* ScanResult 是單次掃描的彙整結果 */
 type ScanResult struct {
-	ScanID     string
-	Total      int
-	BySeverity map[model.Severity]int
-	ByEngine   map[string]int
-	DurationMs int64
-	Err        error
+	ScanID       string
+	Total        int
+	BySeverity   map[model.Severity]int
+	ByEngine     map[string]int
+	DurationMs   int64
+	SBOMPackages int   // 產出的 SBOM 套件數 未產 SBOM 為 0
+	SBOMErr      error // SBOM 產生錯誤 不影響 scan 成敗
+	Err          error
 }
 
 /* newScanResult 建立空結果 */
@@ -186,6 +196,10 @@ func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanne
 		}
 	}
 
+	if o.sbom {
+		o.generateSBOM(ctx, sc, result)
+	}
+
 	result.DurationMs = time.Since(start).Milliseconds()
 
 	completed := time.Now()
@@ -208,6 +222,48 @@ func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanne
 	})
 
 	return result, result.Err
+}
+
+/*
+	generateSBOM 對本機路徑目標產 SBOM 存為 scan artifact
+
+僅支援路徑目標 URL host 目標跳過 SBOM 產生或寫入失敗記於 SBOMErr 不影響 scan 成敗
+*/
+func (o *Orchestrator) generateSBOM(ctx context.Context, sc *scanContext, result *ScanResult) {
+	if scanner.DetectTargetKind(sc.target) != scanner.TargetPath {
+		result.SBOMErr = fmt.Errorf("SBOM 僅支援本機路徑目標 已跳過")
+		return
+	}
+
+	o.emit("sbom_started", map[string]interface{}{"scan_id": sc.scanID})
+
+	content, err := sbom.Generate(ctx, sc.target)
+	if err != nil {
+		result.SBOMErr = err
+		o.emit("sbom_completed", map[string]interface{}{"scan_id": sc.scanID, "status": "failed"})
+		return
+	}
+
+	if _, err := o.q.CreateArtifact(ctx, sqlc.CreateArtifactParams{
+		ID:      ulid.Make().String(),
+		ScanID:  sc.scanID,
+		Type:    "sbom",
+		Engine:  sbom.Binary,
+		Format:  sbom.Format,
+		Content: string(content),
+	}); err != nil {
+		result.SBOMErr = fmt.Errorf("寫入 SBOM artifact 失敗: %w", err)
+		return
+	}
+
+	if pkgs, perr := sbom.ParsePackages(content); perr == nil {
+		result.SBOMPackages = len(pkgs)
+	}
+	o.emit("sbom_completed", map[string]interface{}{
+		"scan_id":  sc.scanID,
+		"status":   "completed",
+		"packages": result.SBOMPackages,
+	})
 }
 
 /* engineNames 取出引擎名稱清單 */

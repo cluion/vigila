@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { api, subscribeEvents, type ScanDetail, type Finding } from "@/lib/api";
+import {
+  api,
+  subscribeEvents,
+  type ScanDetail,
+  type Finding,
+  type SBOMResponse,
+} from "@/lib/api";
 import { SEVERITIES, FINDING_STATUSES, formatTime, formatDuration } from "@/lib/constants";
 import {
   SeverityBadge,
@@ -45,6 +51,7 @@ export function ScanDetailPage({
 }) {
   const [scan, setScan] = useState<ScanDetail | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [sbom, setSbom] = useState<SBOMResponse | null>(null);
   const [error, setError] = useState("");
   const [rescanMsg, setRescanMsg] = useState("");
   const [rescanNewId, setRescanNewId] = useState<string>("");
@@ -69,10 +76,15 @@ export function ScanDetailPage({
   };
 
   useEffect(() => {
-    Promise.all([api.getScan(scanId), api.listFindings(scanId)])
-      .then(([s, f]) => {
+    Promise.all([
+      api.getScan(scanId),
+      api.listFindings(scanId),
+      api.getScanSBOM(scanId),
+    ])
+      .then(([s, f, sb]) => {
         setScan(s);
         setFindings(f.findings);
+        setSbom(sb);
       })
       .catch((e) => setError((e as Error).message));
   }, [scanId]);
@@ -383,6 +395,45 @@ export function ScanDetailPage({
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {sbom?.available && (
+        <div>
+          <h2 className="my-4 text-base font-semibold">
+            SBOM 軟體物料清單
+            <span className="ml-2 text-[13px] font-normal text-muted-foreground">
+              {sbom.total} 個套件 {sbom.engine ? `· ${sbom.engine}` : ""}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>套件</TableHead>
+                  <TableHead>版本</TableHead>
+                  <TableHead>類型</TableHead>
+                  <TableHead>授權</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sbom.packages.map((p) => (
+                  <TableRow key={p.purl || `${p.name}@${p.version}`}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="font-mono text-xs tabular-nums">
+                      {p.version || "—"}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-muted-foreground">
+                      {p.type}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-muted-foreground">
+                      {p.licenses.length > 0 ? p.licenses.join(", ") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
     </div>

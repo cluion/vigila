@@ -143,6 +143,43 @@ func (q *Queries) CountFindingsOnlyInScan(ctx context.Context, arg CountFindings
 	return count, err
 }
 
+const createArtifact = `-- name: CreateArtifact :one
+INSERT INTO artifacts (id, scan_id, type, engine, format, content)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING id, scan_id, type, engine, format, content, created_at
+`
+
+type CreateArtifactParams struct {
+	ID      string `json:"id"`
+	ScanID  string `json:"scan_id"`
+	Type    string `json:"type"`
+	Engine  string `json:"engine"`
+	Format  string `json:"format"`
+	Content string `json:"content"`
+}
+
+func (q *Queries) CreateArtifact(ctx context.Context, arg CreateArtifactParams) (Artifact, error) {
+	row := q.db.QueryRowContext(ctx, createArtifact,
+		arg.ID,
+		arg.ScanID,
+		arg.Type,
+		arg.Engine,
+		arg.Format,
+		arg.Content,
+	)
+	var i Artifact
+	err := row.Scan(
+		&i.ID,
+		&i.ScanID,
+		&i.Type,
+		&i.Engine,
+		&i.Format,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createEngineRun = `-- name: CreateEngineRun :one
 INSERT INTO engine_runs (
   id, scan_id, engine, category, command, status, exit_code, duration_ms,
@@ -357,6 +394,28 @@ func (q *Queries) GetFinding(ctx context.Context, id string) (Finding, error) {
 		&i.UniqueIDFromTool,
 		&i.HashCode,
 		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLatestSBOMByScan = `-- name: GetLatestSBOMByScan :one
+SELECT id, scan_id, type, engine, format, content, created_at FROM artifacts
+WHERE scan_id = ? AND type = 'sbom'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestSBOMByScan(ctx context.Context, scanID string) (Artifact, error) {
+	row := q.db.QueryRowContext(ctx, getLatestSBOMByScan, scanID)
+	var i Artifact
+	err := row.Scan(
+		&i.ID,
+		&i.ScanID,
+		&i.Type,
+		&i.Engine,
+		&i.Format,
+		&i.Content,
 		&i.CreatedAt,
 	)
 	return i, err

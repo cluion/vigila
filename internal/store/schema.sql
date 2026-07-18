@@ -134,3 +134,18 @@ CREATE TABLE IF NOT EXISTS scan_findings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_scan_findings_hash ON scan_findings(hash_code);
+
+-- ============================================================================
+-- Artifact layer (scan-produced objects other than findings, e.g. SBOM)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS artifacts (
+  id         TEXT PRIMARY KEY,
+  scan_id    TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL,   -- sbom
+  engine     TEXT NOT NULL,   -- syft
+  format     TEXT NOT NULL,   -- cyclonedx-json
+  content    TEXT NOT NULL,   -- raw artifact content (SBOM JSON)
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_artifacts_scan ON artifacts(scan_id);

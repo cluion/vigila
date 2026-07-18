@@ -124,11 +124,30 @@ export interface Engine {
   };
 }
 
+export interface SBOMPackage {
+  name: string;
+  version: string;
+  type: string;
+  purl: string;
+  licenses: string[];
+}
+
+export interface SBOMResponse {
+  scan_id: string;
+  available: boolean;
+  engine?: string;
+  format?: string;
+  packages: SBOMPackage[];
+  total: number;
+}
+
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
   listFindings: (scanId: string): Promise<{ findings: Finding[]; total: number }> =>
     getJSON(`/scans/${scanId}/findings`),
+  getScanSBOM: (scanId: string): Promise<SBOMResponse> =>
+    getJSON(`/scans/${scanId}/sbom`),
   stats: (): Promise<Stats> => getJSON("/stats"),
   getScanDiff: (fromId: string, toId: string): Promise<ScanDiff> =>
     getJSON(`/scans/${fromId}/diff/${toId}`),

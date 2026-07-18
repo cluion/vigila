@@ -29,6 +29,12 @@ var specs = map[string]downloadSpec{
 		BinName: "grype",
 		Asset:   goreleaserAsset("grype", "tar.gz"),
 	},
+	"syft": {
+		Repo:    "anchore/syft",
+		Format:  "tar.gz",
+		BinName: "syft",
+		Asset:   goreleaserAsset("syft", "tar.gz"),
+	},
 	"trufflehog": {
 		Repo:    "trufflesecurity/trufflehog",
 		Format:  "tar.gz",

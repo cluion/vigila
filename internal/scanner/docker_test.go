@@ -72,6 +72,22 @@ func TestDockerEnabled(t *testing.T) {
 			t.Error("gitleaks 本輪不支援 docker 應回 false")
 		}
 	})
+
+	t.Run("osv-scanner 與 checkov 路徑型引擎支援 docker", func(t *testing.T) {
+		for _, e := range []string{"osv-scanner", "checkov"} {
+			t.Setenv("COMPOSE_PROFILES", e)
+			if !dockerEnabled(e) {
+				t.Errorf("%s 已啟用 profile 應支援 docker", e)
+			}
+		}
+	})
+
+	t.Run("zap 為 URL 目標且寫檔 尚未接入 docker", func(t *testing.T) {
+		t.Setenv("COMPOSE_PROFILES", "zap")
+		if dockerEnabled("zap") {
+			t.Error("zap 尚未支援 docker 應回 false")
+		}
+	})
 }
 
 func TestDockerEnabledNoDocker(t *testing.T) {

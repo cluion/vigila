@@ -11,15 +11,18 @@ import (
 )
 
 /*
-	dockerCapable 為本輪支援以 docker 執行的引擎
+	dockerCapable 為支援以 docker 執行的引擎
 
-只收 stdout 型路徑引擎 gitleaks 需寫檔 nuclei nmap 為 URL host 目標 掛載邏輯不同 皆延後
+只收 stdout 型路徑引擎 掛載目標路徑 捕獲 stdout 即可
+gitleaks 需寫檔 nuclei zap 為 URL 目標且 zap 寫檔 nmap 為 host 目標需 network 皆另行處理
 */
 var dockerCapable = map[string]bool{
-	"semgrep":    true,
-	"trivy":      true,
-	"grype":      true,
-	"trufflehog": true,
+	"semgrep":     true,
+	"trivy":       true,
+	"grype":       true,
+	"trufflehog":  true,
+	"osv-scanner": true,
+	"checkov":     true,
 }
 
 /*

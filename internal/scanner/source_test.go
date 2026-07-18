@@ -51,3 +51,34 @@ func TestResolveSourceDocker(t *testing.T) {
 		t.Errorf("本機無 semgrep 但 profile 已勾選 source = %q 預期 %q", got, SourceDocker)
 	}
 }
+
+/*
+	TestResolveSourceDockerBeatsPath 明確勾選 docker 應蓋過偶然在 PATH 的系統版
+
+使用者在 UI 勾了 docker 即使機器上剛好有同名 binary 也應以 docker 為準 符合明確選擇優先
+*/
+func TestResolveSourceDockerBeatsPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("假 script 不適用 windows")
+	}
+	pathDir := t.TempDir()
+	/* PATH 同時放假 docker 與假 semgrep 使 semgrep 也在 system 可見 */
+	for _, name := range []string{"docker", "semgrep"} {
+		if err := os.WriteFile(filepath.Join(pathDir, name), []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", pathDir)
+	t.Setenv("VIGILA_ENGINES_DIR", t.TempDir()) // 空 managed
+	t.Setenv("COMPOSE_PROFILES", "semgrep")
+
+	if got := ResolveSource("semgrep"); got != SourceDocker {
+		t.Errorf("已勾選 docker 應蓋過 PATH source = %q 預期 %q", got, SourceDocker)
+	}
+
+	/* 未勾選 profile 時 落回 system */
+	t.Setenv("COMPOSE_PROFILES", "")
+	if got := ResolveSource("semgrep"); got != SourceSystem {
+		t.Errorf("未勾選 docker 應用 system source = %q 預期 %q", got, SourceSystem)
+	}
+}

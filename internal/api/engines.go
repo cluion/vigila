@@ -1,8 +1,13 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"sort"
 	"sync"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/cluion/vigila/internal/scanner"
 )
@@ -13,15 +18,17 @@ type installHint struct {
 	Command string `json:"command"`
 }
 
-/* engineInfo 為引擎面板的一項 含類別 目標型態 版本 來源與安裝指引 */
+/* engineInfo 為引擎面板的一項 含類別 目標型態 版本 來源 安裝指引與 docker 勾選狀態 */
 type engineInfo struct {
-	Name        string      `json:"name"`
-	Category    string      `json:"category"`
-	TargetKinds []string    `json:"target_kinds"`
-	Installed   bool        `json:"installed"`
-	Version     string      `json:"version"` // 偵測到的版本 未安裝或抓不到為空字串
-	Source      string      `json:"source"`  // system | managed | missing
-	InstallHint installHint `json:"install_hint"`
+	Name          string      `json:"name"`
+	Category      string      `json:"category"`
+	TargetKinds   []string    `json:"target_kinds"`
+	Installed     bool        `json:"installed"`
+	Version       string      `json:"version"`        // 偵測到的版本 未安裝或抓不到為空字串
+	Source        string      `json:"source"`         // system | managed | docker | missing
+	DockerCapable bool        `json:"docker_capable"` // 是否可經 docker 執行 供面板顯示開關
+	DockerEnabled bool        `json:"docker_enabled"` // 是否已勾選 docker profile
+	InstallHint   installHint `json:"install_hint"`
 }
 
 /*
@@ -45,13 +52,15 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 			hint := e.InstallHint()
 			source := scanner.ResolveSourceFor(e.Name(), e.Binary())
 			infos[i] = engineInfo{
-				Name:        e.Name(),
-				Category:    string(e.Category()),
-				TargetKinds: ks,
-				Installed:   source != scanner.SourceMissing,
-				Version:     scanner.DetectVersion(e, source),
-				Source:      string(source),
-				InstallHint: installHint{DocsURL: hint.DocsURL, Command: hint.Command},
+				Name:          e.Name(),
+				Category:      string(e.Category()),
+				TargetKinds:   ks,
+				Installed:     source != scanner.SourceMissing,
+				Version:       scanner.DetectVersion(e, source),
+				Source:        string(source),
+				DockerCapable: scanner.DockerCapable(e.Name()),
+				DockerEnabled: scanner.DockerProfileEnabled(e.Name()),
+				InstallHint:   installHint{DocsURL: hint.DocsURL, Command: hint.Command},
 			}
 		}(i, e)
 	}
@@ -59,4 +68,37 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
 	return infos
+}
+
+/*
+	setEngineDocker POST /api/engines/{name}/docker 勾選或取消引擎的 docker 執行
+
+body {"enabled": bool} 改寫 .env 的 COMPOSE_PROFILES 僅 docker-capable 引擎可操作
+勾選後該引擎掃描時改走容器 且明確選擇蓋過偶然在 PATH 的系統版
+*/
+func (s *Server) setEngineDocker(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "無效的請求內容")
+		return
+	}
+
+	if !scanner.DockerCapable(name) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("引擎 %s 不支援 docker 執行", name))
+		return
+	}
+
+	if err := scanner.SetDockerProfile(name, body.Enabled); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"name":           name,
+		"docker_enabled": scanner.DockerProfileEnabled(name),
+	})
 }

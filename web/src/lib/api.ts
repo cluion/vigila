@@ -118,6 +118,8 @@ export interface Engine {
   installed: boolean;
   version: string; // 偵測到的版本 未安裝或抓不到為空字串
   source: "system" | "managed" | "docker" | "missing";
+  docker_capable: boolean; // 是否可經 docker 執行
+  docker_enabled: boolean; // 是否已勾選 docker profile
   install_hint: {
     docs_url: string;
     command: string;
@@ -196,6 +198,20 @@ export const api = {
   },
   listProfiles: (): Promise<{ profiles: string }> => getJSON("/profiles"),
   listEngines: (): Promise<{ engines: Engine[] }> => getJSON("/engines"),
+  setEngineDocker: async (
+    name: string,
+    enabled: boolean,
+  ): Promise<{ name: string; docker_enabled: boolean }> => {
+    const res = await fetch(`${BASE}/engines/${name}/docker`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
 };
 
 /* SSE 事件訂閱 回傳 cleanup 函數 */

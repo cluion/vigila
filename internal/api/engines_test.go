@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/cluion/vigila/internal/core/model"
@@ -126,6 +127,40 @@ func TestListEnginesResponseShape(t *testing.T) {
 	}
 	if probe.InstallHint.DocsURL == "" || probe.InstallHint.Command == "" {
 		t.Errorf("shape-probe 應含安裝指引 實際 %+v", probe.InstallHint)
+	}
+}
+
+func TestSetEngineDocker(t *testing.T) {
+	srv, _ := newTestServer(t)
+	t.Chdir(t.TempDir())             // .env 寫在 cwd 隔離到暫存目錄
+	t.Setenv("COMPOSE_PROFILES", "") // 空環境變數 使讀取落到 .env
+
+	post := func(name, body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/engines/"+name+"/docker", strings.NewReader(body))
+		srv.Handler().ServeHTTP(rec, req)
+		return rec
+	}
+
+	/* 勾選 trivy docker */
+	if rec := post("trivy", `{"enabled":true}`); rec.Code != http.StatusOK {
+		t.Fatalf("勾選 trivy 回應碼 %d", rec.Code)
+	}
+	if !scanner.DockerProfileEnabled("trivy") {
+		t.Error("trivy 應已勾選 docker profile")
+	}
+
+	/* 取消 trivy docker */
+	if rec := post("trivy", `{"enabled":false}`); rec.Code != http.StatusOK {
+		t.Fatalf("取消 trivy 回應碼 %d", rec.Code)
+	}
+	if scanner.DockerProfileEnabled("trivy") {
+		t.Error("trivy 應已取消 docker profile")
+	}
+
+	/* 非 docker-capable 引擎應回 400 */
+	if rec := post("gitleaks", `{"enabled":true}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("gitleaks 不支援 docker 應回 400 實際 %d", rec.Code)
 	}
 }
 

@@ -28,18 +28,19 @@ func ResolveSource(binary string) Source {
 /*
 	ResolveSourceFor 判定引擎來源 engineName 用於 docker profile binary 用於 managed 與 PATH
 
-優先序 managed > system > docker 皆無回 missing
-docker 以 engineName 對應 compose profile 因服務名為引擎名 與 binary 可能不同 如 zap 的 binary 為 zap.sh
+優先序 managed > docker(已勾選 profile) > system > missing
+docker 需在 COMPOSE_PROFILES 明確勾選才啟用 屬使用者明確選擇 故蓋過偶然在 PATH 的系統版
+managed 為釘選版仍最高 docker 以 engineName 對應 compose 服務名 與 binary 可能不同 如 zap 的 zap.sh
 */
 func ResolveSourceFor(engineName, binary string) Source {
 	if managedPath(binary) != "" {
 		return SourceManaged
 	}
-	if _, err := exec.LookPath(binary); err == nil {
-		return SourceSystem
-	}
 	if dockerEnabled(engineName) {
 		return SourceDocker
+	}
+	if _, err := exec.LookPath(binary); err == nil {
+		return SourceSystem
 	}
 	return SourceMissing
 }

@@ -10,6 +10,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+
+/*
+	DockerToggle 勾選引擎是否以 docker 執行 切換後回呼重載
+
+不支援 docker 的引擎顯示 — 勾選會寫入 .env 的 COMPOSE_PROFILES 並蓋過偶然在 PATH 的系統版
+*/
+function DockerToggle({
+  engine,
+  onChanged,
+}: {
+  engine: Engine;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  if (!engine.docker_capable) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  const toggle = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      await api.setEngineDocker(engine.name, !engine.docker_enabled);
+      onChanged();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        role="switch"
+        aria-checked={engine.docker_enabled}
+        aria-label={`${engine.name} 以 docker 執行`}
+        disabled={busy}
+        onClick={toggle}
+        className={cn(
+          "relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50",
+          engine.docker_enabled ? "bg-sky-500" : "bg-muted-foreground/30",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block size-4 transform rounded-full bg-white shadow transition-transform",
+            engine.docker_enabled ? "translate-x-4" : "translate-x-0.5",
+          )}
+        />
+      </button>
+      {err && (
+        <span className="text-xs text-critical" title={err}>
+          失敗
+        </span>
+      )}
+    </div>
+  );
+}
 
 /* CopyButton 複製安裝指令 複製後短暫顯示打勾 */
 function CopyButton({ text }: { text: string }) {
@@ -53,11 +115,15 @@ export function EnginesPage() {
   const [engines, setEngines] = useState<Engine[] | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const load = () => {
     api
       .listEngines()
       .then((r) => setEngines(r.engines))
       .catch((e) => setError((e as Error).message));
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
   if (error)
@@ -77,7 +143,8 @@ export function EnginesPage() {
         <h2 className="text-base font-semibold">掃描引擎</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
           共 {engines.length} 個引擎 已安裝 {installedCount} 個。未安裝的引擎可用 vigila engine
-          install 下載 或自行加入 PATH。
+          install 下載 或自行加入 PATH。開啟 Docker 開關即以官方容器執行 免本機安裝
+          並蓋過偶然在 PATH 的系統版。
         </p>
       </div>
 
@@ -90,6 +157,7 @@ export function EnginesPage() {
               <TableHead>目標型態</TableHead>
               <TableHead>版本</TableHead>
               <TableHead>來源</TableHead>
+              <TableHead>Docker</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,6 +199,9 @@ export function EnginesPage() {
                         </div>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <DockerToggle engine={e} onChanged={load} />
                   </TableCell>
                 </TableRow>
               );

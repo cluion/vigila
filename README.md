@@ -48,11 +48,17 @@ vigila scan scanme.nmap.org --engine all      # 主機 VA
 # profile 流程掃描
 vigila scan ./myapp --profile code-audit
 
+# 掃描時順帶產生 SBOM 軟體物料清單 需 syft 僅路徑目標
+vigila scan ./myapp --engine trivy --sbom
+
 # 啟動網頁 http://localhost:7780
 vigila serve
 
 # 匯出報告
 vigila report <scan-id> -f html -o report.html
+
+# 匯出 SBOM CycloneDX JSON 供 CI 上傳或給下游工具
+vigila sbom export <scan-id> -o sbom.json
 
 # 比較兩次掃描的漏洞差異 新增/消失/不變
 vigila diff <scan-id-1> <scan-id-2>

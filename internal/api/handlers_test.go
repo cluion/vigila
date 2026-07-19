@@ -465,6 +465,17 @@ func TestStartScanEnginesListRejectsIncompatible(t *testing.T) {
 	}
 }
 
+/* TestStartScanRejectsFlagLikeExclude 以 - 開頭的排除 pattern 應擋下 防引數走私 */
+func TestStartScanRejectsFlagLikeExclude(t *testing.T) {
+	srv, _ := newTestServer(t)
+	scanner.Register(&webFakeScanner{})
+
+	rec := postScan(t, srv, `{"target": "/tmp/x", "exclude": ["--output=/etc/passwd"]}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("- 開頭的 exclude 應回 400 實際 %d body %s", rec.Code, rec.Body.String())
+	}
+}
+
 /* TestStartScanRejectsTargetWithNoEngine all 模式下沒有引擎支援該目標時應回 400 */
 func TestStartScanRejectsTargetWithNoEngine(t *testing.T) {
 	srv, _ := newTestServer(t)

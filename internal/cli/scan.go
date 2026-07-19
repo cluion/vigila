@@ -67,6 +67,9 @@ func NewScanCmd() *cobra.Command {
 			}
 			defer db.Close()
 
+			if err := scanner.ValidateExcludes(excludes); err != nil {
+				return err
+			}
 			orch := core.New(sqlc.New(db)).WithSBOM(withSBOM)
 			out := cmd.OutOrStdout()
 			opts := scanner.Options{Exclude: excludes}

@@ -5,6 +5,8 @@ package scanner
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/cluion/vigila/internal/core/model"
 )
@@ -26,14 +28,35 @@ type Options struct {
 /*
 	ExcludeArgs 把排除清單組成引擎旗標 每個 pattern 一組 flag value
 
-各引擎排除旗標不同 semgrep --exclude trivy --skip-dirs grype --exclude 等 傳入對應 flag 即可
+各引擎排除旗標不同 semgrep --exclude trivy --skip-dirs 等 傳入對應 flag 即可
+防禦性略過以 - 開頭的 pattern 避免被引擎當旗標解析（argv 走私）呼叫端應已先 ValidateExcludes
 */
 func ExcludeArgs(flag string, patterns []string) []string {
 	out := make([]string, 0, len(patterns)*2)
 	for _, p := range patterns {
+		if strings.HasPrefix(p, "-") {
+			continue
+		}
 		out = append(out, flag, p)
 	}
 	return out
+}
+
+/*
+	ValidateExcludes 檢查排除 pattern 合法性 供輸入邊界呼叫
+
+拒絕以 - 開頭者 否則會被引擎誤判為旗標造成引數走私 空字串亦拒絕
+*/
+func ValidateExcludes(patterns []string) error {
+	for _, p := range patterns {
+		if p == "" {
+			return fmt.Errorf("排除路徑不可為空")
+		}
+		if strings.HasPrefix(p, "-") {
+			return fmt.Errorf("排除路徑不可以 - 開頭: %q", p)
+		}
+	}
+	return nil
 }
 
 /* Result 引擎執行的原始結果 含 stdout 供 Parse 與證據鏈 */

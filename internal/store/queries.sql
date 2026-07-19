@@ -62,6 +62,9 @@ RETURNING *;
 -- name: UpdateScanCreated :one
 UPDATE scans SET created_at = ? WHERE id = ? RETURNING *;
 
+-- name: DeleteScan :exec
+DELETE FROM scans WHERE id = ?;
+
 -- ============================================================================
 -- engine_runs
 -- ============================================================================

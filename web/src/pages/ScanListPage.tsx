@@ -5,6 +5,7 @@ import { SeverityBadge, StatusBadge, EngineBadge } from "@/components/badges";
 import { TrendChart } from "@/components/TrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Trash2 } from "lucide-react";
 
 /* 掃描列表頁 儀表板 */
 export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
@@ -40,6 +41,20 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     if (!scanTarget.trim()) return;
     setScanProgress("啟動中 ...");
     await api.startScan(scanTarget.trim());
+  };
+
+  /* 刪除掃描 阻止冒泡避免開啟詳情 確認後刪除並刷新 */
+  const removeScan = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`確定刪除 ${name} 這次掃描？連帶清除其漏洞與 SBOM 結果 無法復原。`)) {
+      return;
+    }
+    try {
+      await api.deleteScan(id);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   if (error)
@@ -111,7 +126,17 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
                 )}
               </div>
             </div>
-            <StatusBadge status={s.scan.status} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={s.scan.status} />
+              <button
+                onClick={(e) => removeScan(e, s.scan.id, s.scan.project_name)}
+                className="text-muted-foreground transition-colors hover:text-critical"
+                title="刪除掃描"
+                aria-label="刪除掃描"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap gap-2">

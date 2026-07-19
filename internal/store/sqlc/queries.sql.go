@@ -323,6 +323,15 @@ func (q *Queries) CreateScanFinding(ctx context.Context, arg CreateScanFindingPa
 	return err
 }
 
+const deleteScan = `-- name: DeleteScan :exec
+DELETE FROM scans WHERE id = ?
+`
+
+func (q *Queries) DeleteScan(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteScan, id)
+	return err
+}
+
 const getEngineRun = `-- name: GetEngineRun :one
 
 SELECT id, scan_id, engine, category, command, status, exit_code, duration_ms, raw_output_path, error_message, started_at, completed_at FROM engine_runs WHERE id = ?

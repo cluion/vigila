@@ -47,6 +47,7 @@ func New(db *sql.DB) *Server {
 		r.Get("/scans", s.listScans)
 		r.Post("/scans", s.startScan)
 		r.Get("/scans/{id}", s.getScan)
+		r.Delete("/scans/{id}", s.deleteScan)
 		r.Get("/scans/{id}/findings", s.listScanFindings)
 		r.Get("/scans/{id}/runs", s.listScanRuns)
 		r.Get("/scans/{id}/sbom", s.getScanSBOM)

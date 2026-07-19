@@ -165,6 +165,13 @@ export interface SBOMDiff {
 export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
+  deleteScan: async (id: string): Promise<{ deleted: string }> => {
+    const res = await fetch(`${BASE}/scans/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
   listFindings: (scanId: string): Promise<{ findings: Finding[]; total: number }> =>
     getJSON(`/scans/${scanId}/findings`),
   getScanSBOM: (scanId: string): Promise<SBOMResponse> =>

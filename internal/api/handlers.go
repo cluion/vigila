@@ -70,6 +70,33 @@ func (s *Server) getScan(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dto)
 }
 
+/*
+	deleteScan DELETE /api/scans/{id} 刪除掃描
+
+子表 engine_runs findings scan_findings artifacts 皆 ON DELETE CASCADE 連帶清除
+不存在的 scan 回 404 findings 為跨掃描累積 若被其他掃描共用不受影響
+*/
+func (s *Server) deleteScan(w http.ResponseWriter, r *http.Request) {
+	ctx := ensureCtx(r)
+	id := chi.URLParam(r, "id")
+
+	if _, err := s.q.GetScan(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "scan 不存在")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "查詢 scan 失敗")
+		return
+	}
+
+	if err := s.q.DeleteScan(ctx, id); err != nil {
+		writeError(w, http.StatusInternalServerError, "刪除 scan 失敗")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"deleted": id})
+}
+
 /* listScanFindings GET /api/scans/{id}/findings 依 severity 排序 */
 func (s *Server) listScanFindings(w http.ResponseWriter, r *http.Request) {
 	ctx := ensureCtx(r)

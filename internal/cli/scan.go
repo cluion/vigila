@@ -114,7 +114,41 @@ func NewScanCmd() *cobra.Command {
 		fmt.Sprintf("掃描引擎 %s 或 all", scanner.Names()))
 	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "掃描流程 profile 名稱")
 	cmd.Flags().BoolVar(&withSBOM, "sbom", false, "掃描後順帶產生 SBOM 軟體物料清單 需 syft 僅路徑目標")
+	cmd.AddCommand(newScanDeleteCmd())
 	return cmd
+}
+
+/*
+	newScanDeleteCmd 建立 scan delete 子命令 刪除指定掃描
+
+子表 findings artifacts 等 ON DELETE CASCADE 連帶清除 不存在的 id 回錯
+*/
+func newScanDeleteCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete <scan-id>",
+		Short: "刪除掃描及其所有結果",
+		Long:  "依 scan ID 刪除掃描 連帶清除該掃描的引擎執行紀錄 漏洞關聯與 SBOM artifact",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id := args[0]
+			ctx := context.Background()
+			db, err := store.Open(ctx, store.Config{})
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+
+			q := sqlc.New(db)
+			if _, err := q.GetScan(ctx, id); err != nil {
+				return fmt.Errorf("找不到 scan %s: %w", id, err)
+			}
+			if err := q.DeleteScan(ctx, id); err != nil {
+				return fmt.Errorf("刪除 scan 失敗: %w", err)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "已刪除 scan %s\n", id)
+			return nil
+		},
+	}
 }
 
 /* joinNames 組出引擎名稱清單供訊息顯示 */

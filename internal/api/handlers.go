@@ -368,6 +368,7 @@ type startScanRequest struct {
 	Engine  string   `json:"engine"`  // 單一引擎 或 all
 	Engines []string `json:"engines"` // 指定多個引擎 非空時優先於 engine
 	Profile string   `json:"profile"` // profile 名
+	Exclude []string `json:"exclude"` // 排除的路徑或 glob
 }
 
 /* startScan POST /api/scans 從 Web 觸發掃描 背景執行 透過 SSE 推播進度 */
@@ -393,7 +394,7 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case req.Profile != "":
 		run = func() (*core.ScanResult, error) {
-			return orch.RunProfile(ctx, req.Profile, req.Target, scanner.Options{})
+			return orch.RunProfile(ctx, req.Profile, req.Target, scanner.Options{Exclude: req.Exclude})
 		}
 	case len(req.Engines) > 0:
 		/* 指定多個引擎 逐一解析並驗證適用目標型態 */
@@ -407,7 +408,7 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 			scanners = append(scanners, sc)
 		}
 		run = func() (*core.ScanResult, error) {
-			return orch.RunMultiple(ctx, scanners, req.Target, scanner.Options{})
+			return orch.RunMultiple(ctx, scanners, req.Target, scanner.Options{Exclude: req.Exclude})
 		}
 	case req.Engine == "all" || req.Engine == "":
 		/* 依目標型態過濾引擎 與 CLI 共用同一份判斷 見 ADR-011 */
@@ -417,7 +418,7 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		run = func() (*core.ScanResult, error) {
-			return orch.RunMultiple(ctx, scanners, req.Target, scanner.Options{})
+			return orch.RunMultiple(ctx, scanners, req.Target, scanner.Options{Exclude: req.Exclude})
 		}
 	default:
 		sc, err := scanner.GetForTarget(req.Engine, req.Target)
@@ -426,7 +427,7 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		run = func() (*core.ScanResult, error) {
-			return orch.RunSingle(ctx, sc, req.Target, scanner.Options{})
+			return orch.RunSingle(ctx, sc, req.Target, scanner.Options{Exclude: req.Exclude})
 		}
 	}
 

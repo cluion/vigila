@@ -186,7 +186,7 @@ export const api = {
     getJSON(`/projects/${projectId}/trends`),
   startScan: async (
     target: string,
-    opts?: { profile?: string; engines?: string[] },
+    opts?: { profile?: string; engines?: string[]; exclude?: string[] },
   ): Promise<any> => {
     const body: Record<string, unknown> = { target };
     if (opts?.profile) {
@@ -195,6 +195,9 @@ export const api = {
       body.engines = opts.engines;
     } else {
       body.engine = "all";
+    }
+    if (opts?.exclude && opts.exclude.length > 0) {
+      body.exclude = opts.exclude;
     }
     const res = await fetch(`${BASE}/scans`, {
       method: "POST",

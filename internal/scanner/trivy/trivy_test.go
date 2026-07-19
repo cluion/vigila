@@ -103,6 +103,19 @@ func TestBuildCommand(t *testing.T) {
 	}
 }
 
+/* TestBuildCommandExclude 排除清單應轉為 --skip-dirs 旗標 */
+func TestBuildCommandExclude(t *testing.T) {
+	s := &Scanner{}
+	_, args := s.BuildCommand("/tmp/repo", scanner.Options{Exclude: []string{"vendor", "testdata"}})
+	joined := ""
+	for _, a := range args {
+		joined += a + " "
+	}
+	if !contains(joined, "--skip-dirs vendor") || !contains(joined, "--skip-dirs testdata") {
+		t.Errorf("應含兩個 --skip-dirs 實際 %s", joined)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||
 		(len(s) > 0 && len(sub) > 0 && indexOf(s, sub) >= 0))

@@ -53,6 +53,7 @@ func (s *Scanner) CheckInstalled() error {
 */
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
 	args := []string{"-d", target, "-o", "json", "--compact", "--quiet"}
+	args = append(args, scanner.ExcludeArgs("--skip-path", opts.Exclude)...)
 	args = append(args, opts.ExtraArgs...)
 	return binaryName, args
 }

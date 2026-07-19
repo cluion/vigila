@@ -61,6 +61,7 @@ func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []s
 		"--metrics=off",
 		"--quiet",
 	}
+	args = append(args, scanner.ExcludeArgs("--exclude", opts.Exclude)...)
 	args = append(args, opts.ExtraArgs...)
 	args = append(args, target)
 	return binaryName, args

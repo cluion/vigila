@@ -31,6 +31,7 @@ func NewScanCmd() *cobra.Command {
 	var engineName string
 	var profileName string
 	var withSBOM bool
+	var excludes []string
 
 	cmd := &cobra.Command{
 		Use:   "scan <target>",
@@ -68,11 +69,12 @@ func NewScanCmd() *cobra.Command {
 
 			orch := core.New(sqlc.New(db)).WithSBOM(withSBOM)
 			out := cmd.OutOrStdout()
+			opts := scanner.Options{Exclude: excludes}
 
 			/* profile 模式優先 */
 			if profileName != "" {
 				fmt.Fprintf(out, "正在以 profile %s 掃描 %s ...\n", profileName, target)
-				result, err := orch.RunProfile(ctx, profileName, target, scanner.Options{})
+				result, err := orch.RunProfile(ctx, profileName, target, opts)
 				if err != nil {
 					return fmt.Errorf("掃描失敗: %w", err)
 				}
@@ -87,7 +89,7 @@ func NewScanCmd() *cobra.Command {
 					return err
 				}
 				fmt.Fprintf(out, "正在以 %s 掃描 %s ...\n", joinNames(scanners), target)
-				result, err := orch.RunMultiple(ctx, scanners, target, scanner.Options{})
+				result, err := orch.RunMultiple(ctx, scanners, target, opts)
 				if err != nil {
 					return fmt.Errorf("掃描失敗: %w", err)
 				}
@@ -101,7 +103,7 @@ func NewScanCmd() *cobra.Command {
 				return err
 			}
 			fmt.Fprintf(out, "正在以 %s 掃描 %s ...\n", engineName, target)
-			result, err := orch.RunSingle(ctx, s, target, scanner.Options{})
+			result, err := orch.RunSingle(ctx, s, target, opts)
 			if err != nil {
 				return fmt.Errorf("掃描失敗: %w", err)
 			}
@@ -114,6 +116,7 @@ func NewScanCmd() *cobra.Command {
 		fmt.Sprintf("掃描引擎 %s 或 all", scanner.Names()))
 	cmd.Flags().StringVarP(&profileName, "profile", "p", "", "掃描流程 profile 名稱")
 	cmd.Flags().BoolVar(&withSBOM, "sbom", false, "掃描後順帶產生 SBOM 軟體物料清單 需 syft 僅路徑目標")
+	cmd.Flags().StringArrayVar(&excludes, "exclude", nil, "排除路徑 可重複 如 --exclude node_modules --exclude vendor（支援 semgrep trivy checkov）")
 	cmd.AddCommand(newScanDeleteCmd())
 	return cmd
 }

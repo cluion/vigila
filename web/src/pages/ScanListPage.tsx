@@ -16,6 +16,7 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
   const [scanTarget, setScanTarget] = useState("");
   const [engines, setEngines] = useState<Engine[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exclude, setExclude] = useState("");
 
   const refresh = () => {
     api
@@ -59,9 +60,14 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
   const triggerScan = async () => {
     if (!scanTarget.trim()) return;
     setScanProgress("啟動中 ...");
-    /* 未勾選任何引擎＝全部適用者 勾選則只跑選定的 */
+    /* 未勾選任何引擎＝全部適用者 勾選則只跑選定的 排除以空白或逗號分隔 */
+    const excludes = exclude
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     await api.startScan(scanTarget.trim(), {
       engines: selected.size > 0 ? [...selected] : undefined,
+      exclude: excludes.length > 0 ? excludes : undefined,
     });
   };
 
@@ -144,6 +150,19 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
           )}
         </div>
       )}
+
+      {/* 排除路徑 空白或逗號分隔 gitleaks 不支援 */}
+      <div className="mb-5 flex items-center gap-2">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">排除路徑：</span>
+        <Input
+          type="text"
+          className="min-w-[200px] flex-1 text-[13px]"
+          placeholder="以空白或逗號分隔 如 node_modules vendor（支援 semgrep trivy checkov）"
+          value={exclude}
+          onChange={(e) => setExclude(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && triggerScan()}
+        />
+      </div>
 
       {/* 統計卡片 */}
       <div className="mb-6 grid grid-cols-4 gap-3">

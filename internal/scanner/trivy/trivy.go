@@ -55,6 +55,7 @@ func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []s
 		"--exit-code", "0",
 		"--quiet",
 	}
+	args = append(args, scanner.ExcludeArgs("--skip-dirs", opts.Exclude)...)
 	args = append(args, opts.ExtraArgs...)
 	args = append(args, target)
 	return binaryName, args

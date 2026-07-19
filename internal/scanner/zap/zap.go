@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -37,11 +38,22 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetURL}
 }
 
-/* InstallHint ZAP 原生安裝或用官方 Docker image */
+/*
+	InstallHint ZAP 依作業系統給對應安裝指令 docker 執行請用面板 Docker 開關
+
+macOS brew cask Windows choco Linux snap 為各平台最通用方式
+*/
 func (s *Scanner) InstallHint() scanner.InstallHint {
+	cmd := "sudo snap install zaproxy --classic"
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = "brew install --cask zap"
+	case "windows":
+		cmd = "choco install zap"
+	}
 	return scanner.InstallHint{
 		DocsURL: "https://www.zaproxy.org/download/",
-		Command: "brew install --cask zap  # 或 docker pull ghcr.io/zaproxy/zaproxy:stable",
+		Command: cmd,
 	}
 }
 

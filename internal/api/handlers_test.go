@@ -442,6 +442,29 @@ func TestStartScanRejectsIncompatibleEngine(t *testing.T) {
 	}
 }
 
+/* TestStartScanWithEnginesList 指定多個引擎清單應接受並啟動 */
+func TestStartScanWithEnginesList(t *testing.T) {
+	srv, _ := newTestServer(t)
+	scanner.Register(&webFakeScanner{})
+
+	rec := postScan(t, srv, `{"target": "/tmp/multi", "engines": ["fake-web"]}`)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("指定引擎清單應回 202 實際 %d body %s", rec.Code, rec.Body.String())
+	}
+}
+
+/* TestStartScanEnginesListRejectsIncompatible 清單中有不吃該目標的引擎應回 400 */
+func TestStartScanEnginesListRejectsIncompatible(t *testing.T) {
+	srv, _ := newTestServer(t)
+	scanner.Register(&webFakeScanner{})
+
+	/* fake-web 只吃路徑 對 URL 目標應擋下 */
+	rec := postScan(t, srv, `{"target": "https://example.com", "engines": ["fake-web"]}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("清單含不相容引擎應回 400 實際 %d body %s", rec.Code, rec.Body.String())
+	}
+}
+
 /* TestStartScanRejectsTargetWithNoEngine all 模式下沒有引擎支援該目標時應回 400 */
 func TestStartScanRejectsTargetWithNoEngine(t *testing.T) {
 	srv, _ := newTestServer(t)

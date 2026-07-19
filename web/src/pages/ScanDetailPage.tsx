@@ -95,7 +95,7 @@ export function ScanDetailPage({
   const rescan = async () => {
     if (!scan) return;
     setRescanMsg("重掃已啟動 ...");
-    await api.startScan(scan.target, scan.profile || undefined);
+    await api.startScan(scan.target, { profile: scan.profile || undefined });
   };
 
   useEffect(() => {

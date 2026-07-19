@@ -184,11 +184,22 @@ export const api = {
   listProjects: (): Promise<{ projects: Project[] }> => getJSON("/projects"),
   trends: (projectId: string): Promise<Trends> =>
     getJSON(`/projects/${projectId}/trends`),
-  startScan: async (target: string, profile?: string): Promise<any> => {
+  startScan: async (
+    target: string,
+    opts?: { profile?: string; engines?: string[] },
+  ): Promise<any> => {
+    const body: Record<string, unknown> = { target };
+    if (opts?.profile) {
+      body.profile = opts.profile;
+    } else if (opts?.engines && opts.engines.length > 0) {
+      body.engines = opts.engines;
+    } else {
+      body.engine = "all";
+    }
     const res = await fetch(`${BASE}/scans`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, profile: profile || "", engine: profile ? "" : "all" }),
+      body: JSON.stringify(body),
     });
     return res.json();
   },

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { api, subscribeEvents, type ScanStat } from "@/lib/api";
+import { api, subscribeEvents, type ScanStat, type Engine } from "@/lib/api";
 import { formatTime, formatDuration } from "@/lib/constants";
 import { SeverityBadge, StatusBadge, EngineBadge } from "@/components/badges";
 import { TrendChart } from "@/components/TrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* 掃描列表頁 儀表板 */
 export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
@@ -13,6 +14,8 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
   const [error, setError] = useState("");
   const [scanProgress, setScanProgress] = useState<string>("");
   const [scanTarget, setScanTarget] = useState("");
+  const [engines, setEngines] = useState<Engine[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const refresh = () => {
     api
@@ -20,6 +23,13 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
       .then((s) => setStats(s.recent_scans))
       .catch((e) => setError((e as Error).message));
   };
+
+  useEffect(() => {
+    api
+      .listEngines()
+      .then((r) => setEngines(r.engines))
+      .catch(() => setEngines([]));
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -37,10 +47,22 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     return unsub;
   }, []);
 
+  const toggleEngine = (name: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
   const triggerScan = async () => {
     if (!scanTarget.trim()) return;
     setScanProgress("啟動中 ...");
-    await api.startScan(scanTarget.trim());
+    /* 未勾選任何引擎＝全部適用者 勾選則只跑選定的 */
+    await api.startScan(scanTarget.trim(), {
+      engines: selected.size > 0 ? [...selected] : undefined,
+    });
   };
 
   /* 刪除掃描 阻止冒泡避免開啟詳情 確認後刪除並刷新 */
@@ -87,6 +109,41 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
           <span className="ml-1 text-[13px] text-indigo animate-pulse">{scanProgress}</span>
         )}
       </div>
+
+      {/* 引擎選擇 未勾選＝全部適用者 勾選則只跑選定的 */}
+      {engines.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs text-muted-foreground">
+            引擎{selected.size === 0 ? "（全部適用者）" : `（已選 ${selected.size}）`}：
+          </span>
+          {engines.map((e) => {
+            const on = selected.has(e.name);
+            return (
+              <button
+                key={e.name}
+                onClick={() => toggleEngine(e.name)}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                  on
+                    ? "border-indigo bg-indigo/15 text-indigo"
+                    : "border-border text-muted-foreground hover:bg-accent",
+                )}
+                title={`${e.category} · ${e.target_kinds.join(" ")}`}
+              >
+                {e.name}
+              </button>
+            );
+          })}
+          {selected.size > 0 && (
+            <button
+              onClick={() => setSelected(new Set())}
+              className="ml-1 text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              清除
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 統計卡片 */}
       <div className="mb-6 grid grid-cols-4 gap-3">

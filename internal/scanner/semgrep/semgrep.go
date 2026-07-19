@@ -35,7 +35,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://semgrep.dev/docs/getting-started/",
-		Command: "brew install semgrep",
+		Command: "pip install semgrep",
 	}
 }
 

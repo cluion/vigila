@@ -44,7 +44,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://github.com/trufflesecurity/trufflehog#floppy_disk-installation",
-		Command: "brew install trufflehog",
+		Command: "vigila engine install trufflehog",
 	}
 }
 

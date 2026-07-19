@@ -41,7 +41,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://docs.projectdiscovery.io/tools/nuclei/install",
-		Command: "brew install nuclei",
+		Command: "vigila engine install nuclei",
 	}
 }
 

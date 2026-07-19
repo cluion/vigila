@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/cluion/vigila/internal/core"
@@ -37,11 +38,22 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 	return []scanner.TargetKind{scanner.TargetHost}
 }
 
-/* InstallHint nmap 安裝指引 */
+/*
+	InstallHint nmap 安裝指引 依作業系統給對應套件管理器指令
+
+nmap 無官方可攜 binary 也非 pip 套件 故依 GOOS 提示 macOS brew Linux apt Windows choco
+*/
 func (s *Scanner) InstallHint() scanner.InstallHint {
+	cmd := "sudo apt install nmap"
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = "brew install nmap"
+	case "windows":
+		cmd = "choco install nmap"
+	}
 	return scanner.InstallHint{
 		DocsURL: "https://nmap.org/download.html",
-		Command: "brew install nmap",
+		Command: cmd,
 	}
 }
 

@@ -32,7 +32,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://trivy.dev/latest/getting-started/installation/",
-		Command: "brew install trivy",
+		Command: "vigila engine install trivy",
 	}
 }
 

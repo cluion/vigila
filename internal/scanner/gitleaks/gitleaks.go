@@ -49,7 +49,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://github.com/gitleaks/gitleaks#installing",
-		Command: "brew install gitleaks",
+		Command: "vigila engine install gitleaks",
 	}
 }
 

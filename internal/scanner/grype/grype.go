@@ -37,7 +37,7 @@ func (s *Scanner) TargetKinds() []scanner.TargetKind {
 func (s *Scanner) InstallHint() scanner.InstallHint {
 	return scanner.InstallHint{
 		DocsURL: "https://github.com/anchore/grype#installation",
-		Command: "brew install grype",
+		Command: "vigila engine install grype",
 	}
 }
 

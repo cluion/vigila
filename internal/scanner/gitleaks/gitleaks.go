@@ -82,12 +82,20 @@ func reportPath(target string) string {
 }
 
 /*
-	Run 執行掃描 覆寫共用實作
+	Run 執行掃描 依來源分流
 
-gitleaks report 只能寫檔 故執行後讀檔再刪除
+gitleaks report 只能寫檔 docker 來源掛目標與輸出目錄執行後讀回 系統來源寫暫存檔讀回
 沒找到 secret 時 gitleaks 不寫 report 檔 視為空結果
 */
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
+	if scanner.ResolveSourceFor(s.Name(), binaryName) == scanner.SourceDocker {
+		return s.runDocker(ctx, target, opts)
+	}
+	return s.runSystem(ctx, target, opts)
+}
+
+/* runSystem 以本機 gitleaks 執行 report 寫暫存檔後讀回再刪除 */
+func (s *Scanner) runSystem(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
 
 	/* 找出 report-path 引數值 */
@@ -114,6 +122,43 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 		_ = os.Remove(reportFile)
 	}
 
+	return res, nil
+}
+
+/*
+	runDocker 以官方 image 執行 掛目標與暫存輸出目錄
+
+報告寫入掛載的輸出目錄 執行後從主機端讀回 找不到報告代表無發現 留空
+*/
+func (s *Scanner) runDocker(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
+	abs, err := filepath.Abs(target)
+	if err != nil {
+		abs = target
+	}
+	/* 0o700 僅本人可存取 報告含密鑰明文 不可世界可讀 */
+	outDir, err := os.MkdirTemp("", "vigila-gitleaks-*")
+	if err != nil {
+		return nil, fmt.Errorf("建立 gitleaks 輸出暫存目錄失敗: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(outDir) }()
+
+	/* 以主機使用者身分執行容器 使其能寫入 0o700 目錄 免用世界可寫目錄 unix 才有 uid */
+	user := ""
+	if uid := os.Getuid(); uid >= 0 {
+		user = fmt.Sprintf("%d:%d", uid, os.Getgid())
+	}
+
+	report := filepath.Join(outDir, "report.json")
+	args := []string{"dir", abs, "--report-format", "json", "--report-path", report, "--no-banner"}
+	args = append(args, opts.ExtraArgs...)
+
+	res, err := scanner.DefaultRun(ctx, "docker", scanner.DockerReportArgs(s.Name(), abs, outDir, user, args))
+	if err != nil {
+		return nil, err
+	}
+	if raw, rerr := os.ReadFile(report); rerr == nil {
+		res.RawOutput = raw
+	}
 	return res, nil
 }
 

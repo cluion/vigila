@@ -10,8 +10,8 @@ func TestDockerCapable(t *testing.T) {
 	if !DockerCapable("semgrep") || !DockerCapable("zap") {
 		t.Error("semgrep zap 應為 docker-capable")
 	}
-	if DockerCapable("gitleaks") || DockerCapable("nmap") {
-		t.Error("gitleaks nmap 本輪不支援 docker")
+	if DockerCapable("nmap") {
+		t.Error("nmap 本輪不支援 docker")
 	}
 }
 
@@ -54,8 +54,8 @@ func TestSetDockerProfile(t *testing.T) {
 	}
 
 	/* 非 docker-capable 引擎啟用應回錯 */
-	if err := SetDockerProfile("gitleaks", true); err == nil {
-		t.Error("gitleaks 不支援 docker 啟用應回錯")
+	if err := SetDockerProfile("nmap", true); err == nil {
+		t.Error("nmap 不支援 docker 啟用應回錯")
 	}
 }
 

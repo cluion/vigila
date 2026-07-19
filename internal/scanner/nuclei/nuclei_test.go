@@ -9,6 +9,26 @@ import (
 	"github.com/cluion/vigila/internal/scanner"
 )
 
+/*
+	TestParseV3Format nuclei v3 的 info.tags 為陣列 須能解析不報錯
+
+回歸測試 早期 struct 將 tags 定為 string 遇 v3 -jsonl 輸出即 unmarshal 失敗
+*/
+func TestParseV3Format(t *testing.T) {
+	line := `{"template-id":"waf-detect","info":{"name":"WAF Detection","severity":"info","tags":["waf","tech","misc"],"reference":["https://x"]},"matched-at":"http://example.com","host":"example.com","type":"http"}`
+	s := &Scanner{}
+	findings, err := s.Parse([]byte(line))
+	if err != nil {
+		t.Fatalf("v3 格式解析失敗: %v", err)
+	}
+	if len(findings) != 1 || findings[0].RuleID != "waf-detect" {
+		t.Fatalf("應解析出 1 筆 waf-detect 實際 %+v", findings)
+	}
+	if findings[0].URL != "http://example.com" {
+		t.Errorf("URL 應取 matched-at 實際 %s", findings[0].URL)
+	}
+}
+
 /* TestParse 解析 NDJSON 確認 DAST 欄位與 severity 映射正確 */
 func TestParse(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("testdata", "sample.json"))
@@ -74,7 +94,7 @@ func TestExitCodeIsFindings(t *testing.T) {
 	}
 }
 
-/* TestBuildCommand 確認指令含 -u 與 -json */
+/* TestBuildCommand 確認指令含 -u 與 -jsonl */
 func TestBuildCommand(t *testing.T) {
 	s := &Scanner{}
 	binary, args := s.BuildCommand("http://example.com", scanner.Options{})
@@ -88,8 +108,8 @@ func TestBuildCommand(t *testing.T) {
 		}
 		joined += a + " "
 	}
-	if !containsStr(joined, "-json") {
-		t.Error("應含 -json")
+	if !containsStr(joined, "-jsonl") {
+		t.Error("應含 -jsonl")
 	}
 	if !containsStr(joined, "http://example.com") {
 		t.Error("應含目標 URL")

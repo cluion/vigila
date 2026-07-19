@@ -48,10 +48,18 @@ services:
     image: ghcr.io/zaproxy/zaproxy:stable
     profiles: [zap]
 
-  # ───── 尚未支援 docker 執行 這些引擎請用本機或 vigila engine install ─────
-  # gitleaks   報告只能寫檔 容器內 --rm 後消失 需額外掛載處理
-  # nuclei     DAST URL 目標 無需 volume 掛載邏輯不同
-  # nmap       VA host 目標 需 network_mode host
+  # nuclei 為 URL 目標 直接傳入 -u 不需掛載 stdout 即 NDJSON
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    profiles: [nuclei]
+
+  # gitleaks 報告只能寫檔 vigila 掃描時掛目標與暫存輸出目錄 執行後讀回報告
+  gitleaks:
+    image: ghcr.io/gitleaks/gitleaks:latest
+    profiles: [gitleaks]
+
+  # ───── 尚未支援 docker 執行 ─────
+  # nmap   VA host 目標 需 network_mode host
 
 volumes:
   trivy-cache:

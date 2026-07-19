@@ -159,8 +159,8 @@ func TestSetEngineDocker(t *testing.T) {
 	}
 
 	/* 非 docker-capable 引擎應回 400 */
-	if rec := post("gitleaks", `{"enabled":true}`); rec.Code != http.StatusBadRequest {
-		t.Errorf("gitleaks 不支援 docker 應回 400 實際 %d", rec.Code)
+	if rec := post("nmap", `{"enabled":true}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("nmap 不支援 docker 應回 400 實際 %d", rec.Code)
 	}
 }
 

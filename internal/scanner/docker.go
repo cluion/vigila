@@ -24,6 +24,8 @@ var dockerCapable = map[string]bool{
 	"osv-scanner": true,
 	"checkov":     true,
 	"zap":         true,
+	"nuclei":      true,
+	"gitleaks":    true,
 }
 
 /*
@@ -134,4 +136,36 @@ func dockerRun(ctx context.Context, engineName, target string, args []string) (*
 		abs = target
 	}
 	return DefaultRun(ctx, "docker", dockerArgs(engineName, target, abs, args))
+}
+
+/*
+	DockerRunNoMount 對 URL host 目標的引擎以容器執行 不掛載任何目錄
+
+目標透過 args 直接傳入 如 nuclei -u <url> 捕獲 stdout 供 URL host 型引擎的 Run 呼叫
+--profile 確保該引擎 service 被啟用 不依賴當下 COMPOSE_PROFILES
+*/
+func DockerRunNoMount(ctx context.Context, engineName string, args []string) (*Result, error) {
+	full := append([]string{"compose", "--profile", engineName, "run", "--rm", engineName}, args...)
+	return DefaultRun(ctx, "docker", full)
+}
+
+/*
+	DockerReportArgs 組出「掛目標 + 掛輸出目錄」的 compose run 參數 供寫檔型路徑引擎
+
+如 gitleaks 掃 absTarget 但報告寫入 outDir 兩者皆同路徑掛載 讓容器內外一致
+user 非空時以 --user 指定容器身分 讓報告可寫入 0o700 目錄 保護含密鑰的報告不外洩
+呼叫端負責在 args 內以 outDir 下的路徑指定報告輸出 並於執行後讀回
+*/
+func DockerReportArgs(engineName, absTarget, outDir, user string, args []string) []string {
+	/* bind mount 預設可寫 不加 :rw 同路徑掛載加 :rw 在部分 runtime 會失效 */
+	out := []string{"compose", "--profile", engineName, "run", "--rm"}
+	if user != "" {
+		out = append(out, "--user", user)
+	}
+	out = append(out,
+		"-v", absTarget+":"+absTarget,
+		"-v", outDir+":"+outDir,
+		engineName,
+	)
+	return append(out, args...)
 }

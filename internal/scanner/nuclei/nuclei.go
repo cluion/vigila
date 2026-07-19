@@ -54,14 +54,14 @@ func (s *Scanner) CheckInstalled() error {
 	BuildCommand 組 nuclei 掃描指令
 
 -u <target> 指定目標 URL
--json 輸出 NDJSON 每行一個結果
+-jsonl 輸出 JSONL 每行一個結果 nuclei v3 已將舊 -json 更名為此
 -silent 只輸出結果 不含 banner
--nc 不檢查更新 避免網路等待
+-nc 不上色輸出
 */
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
 	args := []string{
 		"-u", target,
-		"-json",
+		"-jsonl",
 		"-silent",
 		"-nc",
 	}
@@ -69,9 +69,16 @@ func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []s
 	return binaryName, args
 }
 
-/* Run 執行掃描 用共用 subprocess 實作 stdout 即 NDJSON */
+/*
+	Run 執行掃描 依來源分流 stdout 即 NDJSON
+
+docker 來源用官方 image 不掛載 直接把 -u <url> 傳入容器 系統來源走本機 subprocess
+*/
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
+	if scanner.ResolveSourceFor(s.Name(), binary) == scanner.SourceDocker {
+		return scanner.DockerRunNoMount(ctx, s.Name(), args)
+	}
 	return scanner.DefaultRun(ctx, binary, args)
 }
 
@@ -102,8 +109,8 @@ type nucleiInfo struct {
 	Name        string   `json:"name"`
 	Severity    string   `json:"severity"`
 	Description string   `json:"description"`
-	Tags        string   `json:"tags"`
 	Reference   []string `json:"reference"`
+	/* 刻意不含 tags nuclei v2 為字串 v3 為陣列 未使用故略去避免版本相容問題 */
 }
 
 /*

@@ -66,15 +66,15 @@ func TestDockerEnabled(t *testing.T) {
 		}
 	})
 
-	t.Run("不支援 docker 的引擎即使啟用 profile 也回 false", func(t *testing.T) {
-		t.Setenv("COMPOSE_PROFILES", "gitleaks")
-		if dockerEnabled("gitleaks") {
-			t.Error("gitleaks 本輪不支援 docker 應回 false")
+	t.Run("nmap 需 host 網路 尚未接入 docker", func(t *testing.T) {
+		t.Setenv("COMPOSE_PROFILES", "nmap")
+		if dockerEnabled("nmap") {
+			t.Error("nmap 尚未支援 docker 應回 false")
 		}
 	})
 
-	t.Run("osv-scanner checkov zap 皆支援 docker", func(t *testing.T) {
-		for _, e := range []string{"osv-scanner", "checkov", "zap"} {
+	t.Run("osv-scanner checkov zap nuclei gitleaks 皆支援 docker", func(t *testing.T) {
+		for _, e := range []string{"osv-scanner", "checkov", "zap", "nuclei", "gitleaks"} {
 			t.Setenv("COMPOSE_PROFILES", e)
 			if !dockerEnabled(e) {
 				t.Errorf("%s 已啟用 profile 應支援 docker", e)

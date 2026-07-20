@@ -120,6 +120,7 @@ export interface Engine {
   source: "system" | "managed" | "docker" | "missing";
   docker_capable: boolean; // 是否可經 docker 執行
   docker_enabled: boolean; // 是否已勾選 docker profile
+  installable: boolean; // 是否可經面板一鍵安裝（managed binary 下載）
   install_hint: {
     docs_url: string;
     command: string;
@@ -227,6 +228,17 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled }),
+    });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
+  installEngine: async (
+    name: string,
+  ): Promise<{ engine: string; version: string; path: string }> => {
+    const res = await fetch(`${BASE}/engines/${name}/install`, {
+      method: "POST",
     });
     if (!res.ok) {
       throw new Error(`API ${res.status}: ${await res.text()}`);

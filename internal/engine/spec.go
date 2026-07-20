@@ -147,3 +147,14 @@ func specFor(name string) (downloadSpec, error) {
 	}
 	return spec, nil
 }
+
+/*
+	IsInstallable 回報引擎是否可經 vigila 自動安裝（managed binary 下載）
+
+供面板決定是否顯示一鍵安裝按鈕 semgrep（pip）checkov（pip）nmap（套件管理器）zap（套件）
+不支援自動安裝 須由使用者依安裝指引手動處理
+*/
+func IsInstallable(name string) bool {
+	_, ok := specs[name]
+	return ok
+}

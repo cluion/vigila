@@ -27,6 +27,21 @@ func TestSpecForUnsupportedEngine(t *testing.T) {
 	}
 }
 
+/* TestIsInstallable 驗證哪些引擎可經面板一鍵安裝 */
+func TestIsInstallable(t *testing.T) {
+	for _, name := range []string{"gitleaks", "grype", "trivy", "trufflehog", "nuclei", "osv-scanner"} {
+		if !IsInstallable(name) {
+			t.Errorf("%s 應可自動安裝", name)
+		}
+	}
+	/* semgrep checkov 靠 pip nmap zap 靠套件管理器 皆不支援一鍵安裝 */
+	for _, name := range []string{"semgrep", "checkov", "nmap", "zap", "unknown-xyz"} {
+		if IsInstallable(name) {
+			t.Errorf("%s 不應可自動安裝", name)
+		}
+	}
+}
+
 /*
 	TestSpecAssetNaming 驗證各引擎 asset 名依平台正確組出
 

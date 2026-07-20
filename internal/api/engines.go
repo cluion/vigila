@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/cluion/vigila/internal/engine"
 	"github.com/cluion/vigila/internal/scanner"
 )
 
@@ -28,6 +29,7 @@ type engineInfo struct {
 	Source        string      `json:"source"`         // system | managed | docker | missing
 	DockerCapable bool        `json:"docker_capable"` // 是否可經 docker 執行 供面板顯示開關
 	DockerEnabled bool        `json:"docker_enabled"` // 是否已勾選 docker profile
+	Installable   bool        `json:"installable"`    // 是否可經面板一鍵安裝（managed binary 下載）
 	InstallHint   installHint `json:"install_hint"`
 }
 
@@ -60,6 +62,7 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 				Source:        string(source),
 				DockerCapable: scanner.DockerCapable(e.Name()),
 				DockerEnabled: scanner.DockerProfileEnabled(e.Name()),
+				Installable:   engine.IsInstallable(e.Name()),
 				InstallHint:   installHint{DocsURL: hint.DocsURL, Command: hint.Command},
 			}
 		}(i, e)
@@ -100,5 +103,33 @@ func (s *Server) setEngineDocker(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"name":           name,
 		"docker_enabled": scanner.DockerProfileEnabled(name),
+	})
+}
+
+/*
+	installEngine POST /api/engines/{name}/install 一鍵安裝 managed binary
+
+僅 installable 引擎可操作（gitleaks grype trivy trufflehog nuclei osv-scanner）
+其餘回 400 引導使用者依安裝指引手動處理
+同步執行 installer 下載 checksum 驗證 解壓 寫入 managed 目錄 完成後回版本與路徑
+*/
+func (s *Server) installEngine(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	if !engine.IsInstallable(name) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("引擎 %s 不支援一鍵安裝 請參考安裝指引", name))
+		return
+	}
+
+	res, err := engine.NewInstaller().Install(name)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"engine":  res.Engine,
+		"version": res.Version,
+		"path":    res.Path,
 	})
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Engine } from "@/lib/api";
 import { EngineBadge } from "@/components/badges";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -63,6 +63,54 @@ function DockerToggle({
             engine.docker_enabled ? "translate-x-4" : "translate-x-0.5",
           )}
         />
+      </button>
+      {err && (
+        <span className="text-xs text-critical" title={err}>
+          失敗
+        </span>
+      )}
+    </div>
+  );
+}
+
+/*
+	InstallButton 一鍵安裝 managed binary 點擊後同步下載 完成後重載清單
+
+僅 installable 引擎顯示 下載需數十秒 期間顯示安裝中 並禁用按鈕防重複點擊
+*/
+function InstallButton({
+  engine,
+  onChanged,
+}: {
+  engine: Engine;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const install = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      await api.installEngine(engine.name);
+      onChanged();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={install}
+        disabled={busy}
+        className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        title="下載官方 binary 到 managed 目錄"
+      >
+        <Download className="size-3" />
+        {busy ? "安裝中" : "安裝"}
       </button>
       {err && (
         <span className="text-xs text-critical" title={err}>
@@ -142,9 +190,9 @@ export function EnginesPage() {
       <div className="mb-4">
         <h2 className="text-base font-semibold">掃描引擎</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          共 {engines.length} 個引擎 已安裝 {installedCount} 個。未安裝的引擎可用 vigila engine
-          install 下載 或自行加入 PATH。開啟 Docker 開關即以官方容器執行 免本機安裝
-          並蓋過偶然在 PATH 的系統版。
+          共 {engines.length} 個引擎 已安裝 {installedCount} 個。未安裝的引擎可點一鍵安裝下載官方
+          binary（gitleaks grype trivy trufflehog nuclei osv-scanner）或依安裝指引自行處理。開啟
+          Docker 開關即以官方容器執行 免本機安裝 並蓋過偶然在 PATH 的系統版。
         </p>
       </div>
 
@@ -182,11 +230,12 @@ export function EnginesPage() {
                         {src.label}
                       </span>
                       {!e.installed && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                             {e.install_hint.command}
                           </code>
                           <CopyButton text={e.install_hint.command} />
+                          {e.installable && <InstallButton engine={e} onChanged={load} />}
                           <a
                             href={e.install_hint.docs_url}
                             target="_blank"

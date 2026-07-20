@@ -92,6 +92,7 @@ func TestListEnginesResponseShape(t *testing.T) {
 		Installed   bool     `json:"installed"`
 		Version     string   `json:"version"`
 		Source      string   `json:"source"`
+		Installable bool     `json:"installable"`
 		InstallHint struct {
 			DocsURL string `json:"docs_url"`
 			Command string `json:"command"`
@@ -127,6 +128,9 @@ func TestListEnginesResponseShape(t *testing.T) {
 	}
 	if probe.InstallHint.DocsURL == "" || probe.InstallHint.Command == "" {
 		t.Errorf("shape-probe 應含安裝指引 實際 %+v", probe.InstallHint)
+	}
+	if probe.Installable {
+		t.Error("shape-probe 不在 managed install 清單 installable 應為 false")
 	}
 }
 
@@ -170,6 +174,29 @@ func TestSetEngineDocker(t *testing.T) {
 	}
 	if scanner.DockerProfileEnabled("nmap") {
 		t.Error("nmap 取消後應移除 docker profile")
+	}
+}
+
+/*
+	TestInstallEngine 驗證一鍵安裝的權限檢查
+
+非 installable 引擎回 400 installable 引擎的 200 分支會打網路下載 不在單元測試範圍
+*/
+func TestInstallEngine(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	post := func(name string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/engines/"+name+"/install", nil)
+		srv.Handler().ServeHTTP(rec, req)
+		return rec
+	}
+
+	/* 非 installable 引擎應回 400 不觸發下載 */
+	for _, name := range []string{"semgrep", "checkov", "nmap", "zap", "unknown-xyz"} {
+		if rec := post(name); rec.Code != http.StatusBadRequest {
+			t.Errorf("%s 不支援一鍵安裝應回 400 實際 %d", name, rec.Code)
+		}
 	}
 }
 

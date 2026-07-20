@@ -57,6 +57,9 @@ export function CommandPalette({
             🏠 回到儀表板
           </CommandItem>
           <CommandItem onSelect={() => run(onTriggerScan)}>🚀 觸發新掃描</CommandItem>
+          <CommandItem onSelect={() => run(() => onNavigate("/engines"))}>
+            🔧 引擎管理
+          </CommandItem>
           <CommandItem onSelect={() => run(toggle)}>
             {resolved === "dark" ? "☀️ 切換為亮色模式" : "🌙 切換為暗色模式"}
           </CommandItem>

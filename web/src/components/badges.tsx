@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { FINDING_STATUSES } from "@/lib/constants";
+import { FINDING_STATUSES, scanStatusLabel } from "@/lib/constants";
 
 /* 嚴重度徽章 實心底色 + 白字
    使用註冊的主題色 critical/high/medium/low/unknown（兩主題一致） */
@@ -28,19 +28,20 @@ const STATUS_CLASS: Record<string, string> = {
   completed: "bg-success text-white",
   running: "bg-indigo text-white",
   failed: "bg-critical text-white",
+  pending: "border border-border text-muted-foreground",
 };
 
-/* 掃描狀態徽章 completed/running/failed 有底色 其餘僅外框 */
+/* 掃描狀態徽章 completed/running/failed 有底色 其餘僅外框 中文標籤 */
 export function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_CLASS[status];
   return (
     <span
       className={cn(
-        "inline-block rounded px-2 py-0.5 text-[11px] font-semibold uppercase whitespace-nowrap",
+        "inline-block rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
         cls || "border border-border text-muted-foreground",
       )}
     >
-      {status}
+      {scanStatusLabel(status)}
     </span>
   );
 }

@@ -74,7 +74,11 @@ function AppInner() {
         open={cmdOpen}
         onOpenChange={setCmdOpen}
         onNavigate={navigate}
-        onTriggerScan={() => navigate("/")}
+        onTriggerScan={() => {
+          navigate("/");
+          /* 回到儀表板後聚焦掃描目標輸入框 讓使用者可直接輸入 */
+          setTimeout(() => document.getElementById("scan-target-input")?.focus(), 50);
+        }}
       />
     </div>
   );

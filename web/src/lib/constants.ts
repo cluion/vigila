@@ -10,6 +10,18 @@ export const FINDING_STATUSES = [
   { value: "ignored", label: "已忽略" },
 ] as const;
 
+/* 掃描與引擎執行狀態的中文標籤 對齊全站繁中介面 */
+export const SCAN_STATUS_LABELS: Record<string, string> = {
+  pending: "等待中",
+  running: "執行中",
+  completed: "已完成",
+  failed: "失敗",
+};
+
+export function scanStatusLabel(status: string): string {
+  return SCAN_STATUS_LABELS[status] || status;
+}
+
 export function formatTime(s: string | null): string {
   if (!s) return "—";
   return new Date(s).toLocaleString("zh-TW", { hour12: false });

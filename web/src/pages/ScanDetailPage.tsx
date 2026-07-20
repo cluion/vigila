@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   api,
   subscribeEvents,
@@ -6,7 +6,13 @@ import {
   type Finding,
   type SBOMResponse,
 } from "@/lib/api";
-import { SEVERITIES, FINDING_STATUSES, formatTime, formatDuration } from "@/lib/constants";
+import {
+  SEVERITIES,
+  FINDING_STATUSES,
+  formatTime,
+  formatDuration,
+  scanStatusLabel,
+} from "@/lib/constants";
 import {
   SeverityBadge,
   StatusBadge,
@@ -56,6 +62,8 @@ export function ScanDetailPage({
   const [error, setError] = useState("");
   const [rescanMsg, setRescanMsg] = useState("");
   const [rescanNewId, setRescanNewId] = useState<string>("");
+  /* 僅在使用者主動按下重掃後 才把後續同目標的掃描事件關聯到本頁 避免他處掃描誤觸 */
+  const rescanPending = useRef(false);
 
   /* 篩選狀態 */
   const [severityFilter, setSeverityFilter] = useState<string>("");
@@ -76,7 +84,9 @@ export function ScanDetailPage({
     }
   };
 
-  useEffect(() => {
+  /* 載入掃描摘要與漏洞清單 供初次載入與重試共用 */
+  const load = () => {
+    setError("");
     Promise.all([api.getScan(scanId), api.listFindings(scanId)])
       .then(([s, f]) => {
         setScan(s);
@@ -89,23 +99,38 @@ export function ScanDetailPage({
       .getScanSBOM(scanId)
       .then(setSbom)
       .catch(() => setSbom(null));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanId]);
 
   /* 一鍵重掃 訂閱 SSE 觀察新掃描進度與 scan_id */
   const rescan = async () => {
     if (!scan) return;
+    setError("");
+    rescanPending.current = true;
     setRescanMsg("重掃已啟動 ...");
-    await api.startScan(scan.target, { profile: scan.profile || undefined });
+    try {
+      await api.startScan(scan.target, { profile: scan.profile || undefined });
+    } catch (e) {
+      rescanPending.current = false;
+      setRescanMsg("");
+      setError((e as Error).message);
+    }
   };
 
   useEffect(() => {
-    /* 訂閱 SSE 重掃時捕捉新 scan_id 並可導航 */
+    /* 訂閱 SSE 僅在本頁主動重掃後 捕捉新 scan_id 並可導航 */
     const unsub = subscribeEvents((type, data) => {
-      if (type === "scan_started" && scan && data.target === scan.target) {
+      if (!rescanPending.current || !scan || data.target !== scan.target) return;
+      if (type === "scan_started") {
         setRescanNewId(data.scan_id || "");
         setRescanMsg("重掃進行中 ...");
-      } else if (type === "scan_completed" && scan && data.target === scan.target) {
+      } else if (type === "scan_completed") {
         setRescanMsg("重掃完成");
+        rescanPending.current = false;
       }
     });
     return unsub;
@@ -155,10 +180,14 @@ export function ScanDetailPage({
     return out;
   }, [findings, severityFilter, engineFilter, statusFilter, search, sortBy]);
 
-  if (error)
+  /* 初次載入失敗（尚無掃描資料）才滿版錯誤 並提供重試 */
+  if (!scan && error)
     return (
       <div className="rounded-lg border border-critical/30 bg-critical/10 p-4 text-sm text-critical">
-        {error}
+        <div>{error}</div>
+        <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+          重試
+        </Button>
       </div>
     );
   if (!scan)
@@ -176,6 +205,20 @@ export function ScanDetailPage({
       >
         ← 返回列表
       </a>
+
+      {/* 一次性操作失敗以可關閉橫幅呈現 不覆蓋整頁 */}
+      {error && (
+        <div className="mb-3 flex items-start justify-between gap-2 rounded-lg border border-critical/30 bg-critical/10 p-3 text-sm text-critical">
+          <span>{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="shrink-0 opacity-70 hover:opacity-100"
+            aria-label="關閉錯誤訊息"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="mb-3 rounded-lg border border-border bg-card p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -220,7 +263,7 @@ export function ScanDetailPage({
               >
                 <EngineBadge>{r.engine}</EngineBadge>
                 <span className="text-xs text-muted-foreground">{r.category}</span>
-                <span className="text-xs text-muted-foreground">· {r.status}</span>
+                <span className="text-xs text-muted-foreground">· {scanStatusLabel(r.status)}</span>
                 {r.duration_ms != null && (
                   <span className="text-xs text-muted-foreground">· {r.duration_ms}ms</span>
                 )}
@@ -242,7 +285,10 @@ export function ScanDetailPage({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={severityFilter} onValueChange={setSeverityFilter}>
+        <Select
+          value={severityFilter || "all"}
+          onValueChange={(v) => setSeverityFilter(v === "all" ? "" : v)}
+        >
           <SelectTrigger className="h-9 w-[140px] text-[13px]">
             <SelectValue placeholder="全部嚴重度" />
           </SelectTrigger>
@@ -303,7 +349,7 @@ export function ScanDetailPage({
           {findings.length === 0 ? "沒有發現" : "沒有符合篩選條件的漏洞"}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -346,7 +392,7 @@ export function ScanDetailPage({
                     <EngineBadge>{f.engine}</EngineBadge>
                     <div className="text-xs text-muted-foreground">{f.category}</div>
                   </TableCell>
-                  <TableCell className="align-top font-mono text-xs text-muted-foreground">
+                  <TableCell className="max-w-[280px] align-top break-all font-mono text-xs text-muted-foreground">
                     {f.file_path && <div>{f.file_path}</div>}
                     {f.start_line && <div>第 {f.start_line} 行</div>}
                     {f.url && <div>{f.url}</div>}

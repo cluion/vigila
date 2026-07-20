@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -42,11 +42,15 @@ export function TrendChart() {
       .catch((e) => setError((e as Error).message));
   }, [projectId]);
 
-  const data = points.map((p) => ({
-    name: formatTime(p.created_at),
-    新增: p.added,
-    修復: p.resolved,
-  }));
+  const data = useMemo(
+    () =>
+      points.map((p) => ({
+        name: formatTime(p.created_at),
+        新增: p.added,
+        修復: p.resolved,
+      })),
+    [points],
+  );
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 mb-6">

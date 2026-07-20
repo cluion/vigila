@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api, subscribeEvents, type ScanStat, type Engine } from "@/lib/api";
 import { formatTime, formatDuration } from "@/lib/constants";
-import { SeverityBadge, StatusBadge, EngineBadge } from "@/components/badges";
+import { StatusBadge, EngineBadge } from "@/components/badges";
 import { TrendChart } from "@/components/TrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,16 +60,23 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
 
   const triggerScan = async () => {
     if (!scanTarget.trim()) return;
+    setError("");
     setScanProgress("啟動中 ...");
     /* 未勾選任何引擎＝全部適用者 勾選則只跑選定的 排除以空白或逗號分隔 */
     const excludes = exclude
       .split(/[\s,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
-    await api.startScan(scanTarget.trim(), {
-      engines: selected.size > 0 ? [...selected] : undefined,
-      exclude: excludes.length > 0 ? excludes : undefined,
-    });
+    try {
+      await api.startScan(scanTarget.trim(), {
+        engines: selected.size > 0 ? [...selected] : undefined,
+        exclude: excludes.length > 0 ? excludes : undefined,
+      });
+      /* 啟動成功後 SSE 接手進度顯示 scan_started/scan_completed */
+    } catch (err) {
+      setScanProgress("");
+      setError((err as Error).message);
+    }
   };
 
   /* 上傳壓縮包掃描 選檔後立即上傳 共用目前的引擎多選與排除設定 */
@@ -78,6 +85,7 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     if (!file) return;
     /* 重置 input value 讓相同檔案可重複選取 */
     e.target.value = "";
+    setError("");
     setScanProgress(`上傳中 ${file.name} ...`);
     const excludes = exclude
       .split(/[\s,]+/)
@@ -101,6 +109,7 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     if (!window.confirm(`確定刪除 ${name} 這次掃描？連帶清除其漏洞與 SBOM 結果 無法復原。`)) {
       return;
     }
+    setError("");
     try {
       await api.deleteScan(id);
       refresh();
@@ -109,10 +118,22 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     }
   };
 
-  if (error)
+  /* 初次載入失敗（尚無資料）才滿版錯誤 並提供重試 */
+  if (!stats && error)
     return (
       <div className="rounded-lg border border-critical/30 bg-critical/10 p-4 text-sm text-critical">
-        {error}
+        <div>{error}</div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() => {
+            setError("");
+            refresh();
+          }}
+        >
+          重試
+        </Button>
       </div>
     );
   if (!stats) return <div className="py-12 text-center text-sm text-muted-foreground">載入中</div>;
@@ -122,9 +143,23 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div>
+      {/* 一次性操作失敗以可關閉橫幅呈現 不覆蓋整頁 */}
+      {error && (
+        <div className="mb-4 flex items-start justify-between gap-2 rounded-lg border border-critical/30 bg-critical/10 p-3 text-sm text-critical">
+          <span>{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="shrink-0 opacity-70 hover:opacity-100"
+            aria-label="關閉錯誤訊息"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* 觸發掃描 */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <Input
+          id="scan-target-input"
           type="text"
           className="min-w-[200px] flex-1"
           placeholder="掃描目標 路徑 URL 或 host 如 /tmp/myapp http://host 192.168.1.10"
@@ -229,8 +264,16 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
       {stats.map((s) => (
         <div
           key={s.scan.id}
-          className="mb-3 cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
+          role="button"
+          tabIndex={0}
+          className="mb-3 cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
           onClick={() => onOpen(s.scan.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onOpen(s.scan.id);
+            }
+          }}
         >
           <div className="mb-2 flex items-center justify-between">
             <div>
@@ -256,7 +299,11 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap gap-2">
-              {s.critical > 0 && <SeverityBadge severity="CRITICAL" />}
+              {s.critical > 0 && (
+                <span className="inline-flex items-center rounded bg-critical px-2 py-0.5 text-xs font-semibold text-white">
+                  {s.critical}
+                </span>
+              )}
               {s.high > 0 && (
                 <span className="inline-flex items-center rounded bg-high px-2 py-0.5 text-xs font-semibold text-white">
                   {s.high}

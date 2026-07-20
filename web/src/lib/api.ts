@@ -205,6 +205,9 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
     return res.json();
   },
   updateFindingStatus: async (id: string, status: string): Promise<Finding> => {

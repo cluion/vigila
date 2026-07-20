@@ -49,7 +49,7 @@ func TestExportSBOMToStdout(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := exportSBOM(ctx, q, "scan1", "", &out); err != nil {
+	if err := exportSBOM(ctx, q, "scan1", "cyclonedx-json", "", &out); err != nil {
 		t.Fatalf("匯出失敗: %v", err)
 	}
 	if out.String() != cliCycloneDX {
@@ -68,7 +68,7 @@ func TestExportSBOMToFile(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "sbom.json")
 	var out bytes.Buffer
-	if err := exportSBOM(ctx, q, "scan1", path, &out); err != nil {
+	if err := exportSBOM(ctx, q, "scan1", "cyclonedx-json", path, &out); err != nil {
 		t.Fatalf("匯出失敗: %v", err)
 	}
 
@@ -90,11 +90,80 @@ func TestExportSBOMMissing(t *testing.T) {
 	ctx := context.Background()
 	q := newSBOMTestDB(t, "scan1") // 未建立 artifact
 	var out bytes.Buffer
-	err := exportSBOM(ctx, q, "scan1", "", &out)
+	err := exportSBOM(ctx, q, "scan1", "cyclonedx-json", "", &out)
 	if err == nil {
 		t.Fatal("無 SBOM 應回錯")
 	}
 	if !strings.Contains(err.Error(), "--sbom") {
 		t.Errorf("錯誤訊息應引導使用 --sbom 實際 %q", err.Error())
+	}
+}
+
+/* TestExportSBOMUnsupportedFormat 不支援的格式應回錯 */
+func TestExportSBOMUnsupportedFormat(t *testing.T) {
+	ctx := context.Background()
+	q := newSBOMTestDB(t, "scan1")
+	var out bytes.Buffer
+	err := exportSBOM(ctx, q, "scan1", "pdf", "", &out)
+	if err == nil {
+		t.Fatal("不支援格式應回錯")
+	}
+	if !strings.Contains(err.Error(), "不支援") {
+		t.Errorf("錯誤應說明不支援 實際 %q", err.Error())
+	}
+}
+
+/* TestExportSBOMToSPDX spdx-json 格式應轉換並含 SPDX 必填欄位 */
+func TestExportSBOMToSPDX(t *testing.T) {
+	ctx := context.Background()
+	q := newSBOMTestDB(t, "scan1")
+	if _, err := q.CreateArtifact(ctx, sqlc.CreateArtifactParams{
+		ID: "a1", ScanID: "scan1", Type: "sbom", Engine: "syft", Format: "cyclonedx-json", Content: cliCycloneDX,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	if err := exportSBOM(ctx, q, "scan1", "spdx-json", "", &out); err != nil {
+		t.Fatalf("匯出 spdx-json 失敗: %v", err)
+	}
+	/* 產出應為 SPDX 2.2 含 spdxVersion 欄位 */
+	if !strings.Contains(out.String(), `"spdxVersion": "SPDX-2.2"`) {
+		t.Errorf("SPDX 匯出應含 spdxVersion SPDX-2.2 實際\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "django") {
+		t.Errorf("SPDX 匯出應含套件名 django")
+	}
+}
+
+/* TestExportSBOMToSyftJSON syft-json 格式應轉換並含 artifacts */
+func TestExportSBOMToSyftJSON(t *testing.T) {
+	ctx := context.Background()
+	q := newSBOMTestDB(t, "scan1")
+	if _, err := q.CreateArtifact(ctx, sqlc.CreateArtifactParams{
+		ID: "a1", ScanID: "scan1", Type: "sbom", Engine: "syft", Format: "cyclonedx-json", Content: cliCycloneDX,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(t.TempDir(), "sbom.syft.json")
+	var out bytes.Buffer
+	if err := exportSBOM(ctx, q, "scan1", "syft-json", path, &out); err != nil {
+		t.Fatalf("匯出 syft-json 失敗: %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("讀取匯出檔失敗: %v", err)
+	}
+	if !strings.Contains(string(got), `"artifacts"`) {
+		t.Errorf("syft JSON 應含 artifacts 陣列")
+	}
+	if !strings.Contains(string(got), "django") {
+		t.Errorf("syft JSON 應含套件名 django")
+	}
+	/* 狀態訊息應標示格式 */
+	if !strings.Contains(out.String(), "syft-json") {
+		t.Errorf("匯出訊息應標示格式 syft-json 實際 %q", out.String())
 	}
 }

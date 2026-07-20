@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -119,11 +120,16 @@ func printSBOMDiff(out io.Writer, r *core.SBOMDiffResult) {
 /* newSBOMExportCmd 建立 sbom export 子命令 依 scan ID 匯出 SBOM */
 func newSBOMExportCmd() *cobra.Command {
 	var output string
+	var format string
 
 	cmd := &cobra.Command{
 		Use:   "export <scan-id>",
 		Short: "匯出掃描的 SBOM",
-		Long: `依 scan ID 匯出該次掃描產生的 SBOM CycloneDX JSON
+		Long: `依 scan ID 匯出該次掃描產生的 SBOM 支援多種格式
+
+  -f cyclonedx-json  原始 CycloneDX JSON（預設）
+  -f spdx-json       SPDX 2.2 JSON（供 SPDX 消費者）
+  -f syft-json       syft JSON（供 syft / Dependency-Track）
 
 SBOM 需先於掃描時以 vigila scan <target> --sbom 產生
 不指定 -o 則印至 stdout 可接管線`,
@@ -136,21 +142,27 @@ SBOM 需先於掃描時以 vigila scan <target> --sbom 產生
 			}
 			defer db.Close()
 
-			return exportSBOM(ctx, sqlc.New(db), args[0], output, cmd.OutOrStdout())
+			return exportSBOM(ctx, sqlc.New(db), args[0], format, output, cmd.OutOrStdout())
 		},
 	}
 
+	cmd.Flags().StringVarP(&format, "format", "f", "cyclonedx-json", "SBOM 格式 cyclonedx-json spdx-json syft-json")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "輸出檔案路徑 不指定則印 stdout")
 	return cmd
 }
 
 /*
-	exportSBOM 取出 scan 的 SBOM artifact 並輸出
+	exportSBOM 取出 scan 的 SBOM artifact 並輸出為指定格式
 
+cyclonedx-json 原樣輸出 spdx-json / syft-json 經 sbom.Convert 轉換
 抽為獨立函式便於測試 指定 output 寫檔 否則印至 out
 掃描無 SBOM 時回明確錯誤引導使用者以 --sbom 產生
 */
-func exportSBOM(ctx context.Context, q *sqlc.Queries, scanID, output string, out io.Writer) error {
+func exportSBOM(ctx context.Context, q *sqlc.Queries, scanID, format, output string, out io.Writer) error {
+	if !sbom.FormatSupported(format) {
+		return fmt.Errorf("不支援的格式 %s 支援 %s", format, strings.Join(sbom.SupportedFormats, " "))
+	}
+
 	art, err := q.GetLatestSBOMByScan(ctx, scanID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -159,13 +171,19 @@ func exportSBOM(ctx context.Context, q *sqlc.Queries, scanID, output string, out
 		return fmt.Errorf("查詢 SBOM 失敗: %w", err)
 	}
 
+	/* 依指定格式轉換 cyclonedx-json 原樣 其餘從套件清單重組 */
+	content, err := sbom.Convert([]byte(art.Content), format)
+	if err != nil {
+		return fmt.Errorf("轉換 SBOM 為 %s 失敗: %w", format, err)
+	}
+
 	if output == "" {
-		_, err := io.WriteString(out, art.Content)
+		_, err := out.Write(content)
 		return err
 	}
 
 	/* 0o600 SBOM 產物僅本人可讀 可能含私有依賴資訊 */
-	if err := os.WriteFile(output, []byte(art.Content), 0o600); err != nil {
+	if err := os.WriteFile(output, content, 0o600); err != nil {
 		return fmt.Errorf("寫入檔案失敗: %w", err)
 	}
 
@@ -173,6 +191,6 @@ func exportSBOM(ctx context.Context, q *sqlc.Queries, scanID, output string, out
 	if pkgs, perr := sbom.ParsePackages([]byte(art.Content)); perr == nil {
 		count = fmt.Sprintf(" 共 %d 個套件", len(pkgs))
 	}
-	fmt.Fprintf(out, "SBOM 已匯出 %s（%s）%s\n", output, art.Format, count)
+	fmt.Fprintf(out, "SBOM 已匯出 %s（%s）%s\n", output, format, count)
 	return nil
 }

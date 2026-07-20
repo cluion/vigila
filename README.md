@@ -63,8 +63,10 @@ vigila serve
 # 匯出報告
 vigila report <scan-id> -f html -o report.html
 
-# 匯出 SBOM CycloneDX JSON 供 CI 上傳或給下游工具
-vigila sbom export <scan-id> -o sbom.json
+# 匯出 SBOM 供 CI 上傳或給下游工具 預設 CycloneDX JSON 可轉 SPDX 或 syft 格式
+vigila sbom export <scan-id> -o sbom.json                    # CycloneDX JSON（預設）
+vigila sbom export <scan-id> -f spdx-json -o sbom.spdx.json  # SPDX 2.2 JSON
+vigila sbom export <scan-id> -f syft-json -o sbom.syft.json  # syft JSON
 
 # 比較兩次 SBOM 的套件變化 供應鏈漂移 新增/移除/變動/不變
 vigila sbom diff <scan-a> <scan-b>

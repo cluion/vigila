@@ -60,6 +60,10 @@ vigila sbom ./myapp
 # 啟動網頁 http://localhost:7780
 vigila serve
 
+# 對外或多人共用時 啟用存取 token 認證 前端首次存取需輸入 token
+vigila serve --addr 0.0.0.0:7780 --auth-token "$(openssl rand -hex 16)"
+# 或用環境變數 VIGILA_AUTH_TOKEN
+
 # 匯出報告
 vigila report <scan-id> -f html -o report.html
 

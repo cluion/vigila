@@ -11,6 +11,9 @@ import (
 /* ErrCrossProject 表示兩次掃描屬不同 project 無法比較 */
 var ErrCrossProject = errors.New("不同 project 的掃描無法比較")
 
+/* ErrNoSBOM 表示掃描存在但未產生 SBOM 屬前置條件未滿足 非資源不存在 */
+var ErrNoSBOM = errors.New("該掃描沒有 SBOM 請先以 vigila scan <target> --sbom 產生")
+
 /*
 	DiffResult 為兩次掃描的差集
 

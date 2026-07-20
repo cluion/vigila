@@ -65,6 +65,13 @@ UPDATE scans SET created_at = ? WHERE id = ? RETURNING *;
 -- name: DeleteScan :exec
 DELETE FROM scans WHERE id = ?;
 
+-- name: ReapStaleRunningScans :execrows
+-- mark scans left in 'running' by a dead process (killed / Ctrl-C) as failed.
+-- datetime('now', ...) yields the same text format as CURRENT_TIMESTAMP (SQLite).
+UPDATE scans
+  SET status = 'failed', completed_at = CURRENT_TIMESTAMP
+WHERE status = 'running' AND created_at < datetime('now', '-1 hour');
+
 -- ============================================================================
 -- engine_runs
 -- ============================================================================

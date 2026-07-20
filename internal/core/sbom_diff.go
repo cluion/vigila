@@ -64,7 +64,7 @@ func loadSBOMPackages(ctx context.Context, q *sqlc.Queries, scanID string) ([]sb
 	art, err := q.GetLatestSBOMByScan(ctx, scanID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("scan %s 沒有 SBOM 請先以 vigila scan <target> --sbom 產生", scanID)
+			return nil, fmt.Errorf("scan %s: %w", scanID, ErrNoSBOM)
 		}
 		return nil, fmt.Errorf("查詢 SBOM 失敗: %w", err)
 	}

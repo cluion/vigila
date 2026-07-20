@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/cluion/vigila/internal/api"
 	"github.com/cluion/vigila/internal/store"
+	"github.com/cluion/vigila/internal/store/sqlc"
 	"github.com/cluion/vigila/web"
 )
 
@@ -29,6 +31,13 @@ func NewServeCmd() *cobra.Command {
 				return err
 			}
 			defer db.Close()
+
+			/* 啟動時回收前一個 process 遺留的 running 殘留掃描 Ctrl-C 或被 kill 未能收尾者 */
+			if n, err := sqlc.New(db).ReapStaleRunningScans(ctx); err != nil {
+				log.Printf("回收殘留掃描失敗: %v", err)
+			} else if n > 0 {
+				log.Printf("已回收 %d 筆逾時未收尾的 running 掃描 標記為 failed", n)
+			}
 
 			srv := api.New(db)
 

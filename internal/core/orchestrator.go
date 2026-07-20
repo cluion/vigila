@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -172,12 +173,14 @@ func (o *Orchestrator) RunSBOMOnly(ctx context.Context, target string) (*ScanRes
 	if result.SBOMErr != nil {
 		status = "failed"
 	}
-	_, _ = o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
+	if _, err := o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
 		ID:          sc.scanID,
 		Status:      status,
 		StartedAt:   &start,
 		CompletedAt: &completed,
-	})
+	}); err != nil {
+		log.Printf("更新 SBOM scan %s 最終狀態為 %s 失敗: %v", sc.scanID, status, err)
+	}
 	o.emit("scan_completed", map[string]interface{}{"scan_id": sc.scanID, "status": status})
 
 	return result, result.SBOMErr
@@ -270,12 +273,15 @@ func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanne
 			result.Err = fmt.Errorf("所有引擎皆未安裝 已略過: %s", strings.Join(result.Skipped, " "))
 		}
 	}
-	_, _ = o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
+	if _, err := o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
 		ID:          sc.scanID,
 		Status:      status,
 		StartedAt:   &start,
 		CompletedAt: &completed,
-	})
+	}); err != nil {
+		/* 更新失敗會讓 scan 停在 running 至少記錄下來供排查 勿靜默吞掉 */
+		log.Printf("更新 scan %s 最終狀態為 %s 失敗: %v", sc.scanID, status, err)
+	}
 
 	o.emit("scan_completed", map[string]interface{}{
 		"scan_id":     sc.scanID,

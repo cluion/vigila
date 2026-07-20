@@ -1035,6 +1035,22 @@ func (q *Queries) ListScansByProject(ctx context.Context, arg ListScansByProject
 	return items, nil
 }
 
+const reapStaleRunningScans = `-- name: ReapStaleRunningScans :execrows
+UPDATE scans
+  SET status = 'failed', completed_at = CURRENT_TIMESTAMP
+WHERE status = 'running' AND created_at < datetime('now', '-1 hour')
+`
+
+// mark scans left in 'running' by a dead process (killed / Ctrl-C) as failed.
+// datetime('now', ...) yields the same text format as CURRENT_TIMESTAMP (SQLite).
+func (q *Queries) ReapStaleRunningScans(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, reapStaleRunningScans)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateEngineRunStatus = `-- name: UpdateEngineRunStatus :one
 UPDATE engine_runs
   SET status = ?,

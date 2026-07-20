@@ -66,7 +66,15 @@ func (s *Server) getScanSBOMDiff(w http.ResponseWriter, r *http.Request) {
 
 	res, err := core.DiffSBOM(ctx, s.q, other, id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		/* 依錯誤型別給正確狀態碼 內部錯誤脫敏 與 scanDiff 一致 */
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeError(w, http.StatusNotFound, err.Error())
+		case errors.Is(err, core.ErrCrossProject), errors.Is(err, core.ErrNoSBOM):
+			writeError(w, http.StatusBadRequest, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "計算 SBOM 差異失敗")
+		}
 		return
 	}
 

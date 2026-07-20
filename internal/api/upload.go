@@ -128,9 +128,10 @@ func (s *Server) uploadAndScan(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	/* 回傳壓縮包檔名而非內部暫存目錄路徑 避免洩漏伺服器檔案系統結構 */
 	writeJSON(w, http.StatusAccepted, map[string]interface{}{
 		"message": "上傳成功 掃描已啟動 進度請訂閱 /api/events",
-		"target":  tempDir,
+		"target":  filepath.Base(header.Filename),
 	})
 }
 

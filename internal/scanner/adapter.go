@@ -59,6 +59,24 @@ func ValidateExcludes(patterns []string) error {
 	return nil
 }
 
+/*
+	ValidateTarget 檢查掃描目標合法性 供輸入邊界呼叫
+
+拒絕以 - 開頭者 否則會被引擎當成旗標解析造成引數走私
+例如 --output=/x（trivy 任意檔寫入）--config=遠端（semgrep 載惡意規則）
+與 ValidateExcludes 同源防護 target 與 exclude 走同一條 argv 信任等級相同
+檔名確實以 - 開頭時 請用 ./-name 或絕對路徑表達
+*/
+func ValidateTarget(target string) error {
+	if strings.TrimSpace(target) == "" {
+		return fmt.Errorf("掃描目標不可為空")
+	}
+	if strings.HasPrefix(target, "-") {
+		return fmt.Errorf("掃描目標不可以 - 開頭 避免被引擎誤判為旗標: %q", target)
+	}
+	return nil
+}
+
 /* Result 引擎執行的原始結果 含 stdout 供 Parse 與證據鏈 */
 type Result struct {
 	RawOutput  []byte // 引擎 stdout 或 report 檔內容

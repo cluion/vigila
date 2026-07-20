@@ -65,19 +65,24 @@ func (s *Scanner) CheckInstalled() error {
 用 dir 掃一般目錄 不需 git repo
 */
 func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []string) {
+	return s.buildCommand(target, opts, reportPath())
+}
+
+/* buildCommand 以指定 report 路徑組指令 供 runSystem 導向 0o700 暫存目錄 */
+func (s *Scanner) buildCommand(target string, opts scanner.Options, report string) (string, []string) {
 	args := []string{
 		"dir",
 		target,
 		"--report-format", "json",
-		"--report-path", reportPath(target),
+		"--report-path", report,
 		"--no-banner",
 	}
 	args = append(args, opts.ExtraArgs...)
 	return binaryName, args
 }
 
-/* reportPath 為每次掃描的暫存 report 檔路徑 */
-func reportPath(target string) string {
+/* reportPath 為 BuildCommand 顯示用的預設暫存 report 檔路徑 實際執行由 runSystem 導向 0o700 目錄 */
+func reportPath() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("vigila-gitleaks-%d.json", time.Now().UnixNano()))
 }
 
@@ -94,32 +99,28 @@ func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) 
 	return s.runSystem(ctx, target, opts)
 }
 
-/* runSystem 以本機 gitleaks 執行 report 寫暫存檔後讀回再刪除 */
+/* runSystem 以本機 gitleaks 執行 report 寫 0o700 暫存目錄後讀回再刪除 */
 func (s *Scanner) runSystem(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
-	binary, args := s.BuildCommand(target, opts)
-
-	/* 找出 report-path 引數值 */
-	reportFile := ""
-	for i, a := range args {
-		if a == "--report-path" && i+1 < len(args) {
-			reportFile = args[i+1]
-			break
-		}
+	/* 報告含 Secret 明文 寫入 0o700 專屬暫存目錄 避免同機他人讀取（MkdirTemp 預設 0o700）
+	   舊版直接寫 os.TempDir 下可預測檔名 世界可讀 存在讀取競態窗口 */
+	outDir, err := os.MkdirTemp("", "vigila-gitleaks-*")
+	if err != nil {
+		return nil, fmt.Errorf("建立 gitleaks 輸出暫存目錄失敗: %w", err)
 	}
+	defer func() { _ = os.RemoveAll(outDir) }()
+
+	reportFile := filepath.Join(outDir, "report.json")
+	binary, args := s.buildCommand(target, opts, reportFile)
 
 	res, err := scanner.DefaultRun(ctx, binary, args)
 	if err != nil {
-		_ = os.Remove(reportFile)
 		return nil, err
 	}
 
-	/* 讀取 report 檔內容作為 RawOutput 並刪除
-	檔案不存在代表沒有發現 留空 RawOutput 即可 */
-	if reportFile != "" {
-		if raw, rerr := os.ReadFile(reportFile); rerr == nil {
-			res.RawOutput = raw
-		}
-		_ = os.Remove(reportFile)
+	/* 讀取 report 檔內容作為 RawOutput 檔案不存在代表沒有發現 留空 RawOutput 即可
+	   目錄由 defer RemoveAll 清除 含其中的明文報告 */
+	if raw, rerr := os.ReadFile(reportFile); rerr == nil {
+		res.RawOutput = raw
 	}
 
 	return res, nil

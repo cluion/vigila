@@ -59,6 +59,9 @@ func NewScanCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
+			if err := scanner.ValidateTarget(target); err != nil {
+				return err
+			}
 
 			ctx := context.Background()
 			db, err := store.Open(ctx, store.Config{})

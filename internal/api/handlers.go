@@ -383,6 +383,10 @@ func (s *Server) startScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "target 必填")
 		return
 	}
+	if err := scanner.ValidateTarget(req.Target); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := scanner.ValidateExcludes(req.Exclude); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return

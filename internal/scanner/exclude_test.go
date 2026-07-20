@@ -39,3 +39,17 @@ func TestValidateExcludes(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateTarget(t *testing.T) {
+	for _, ok := range []string{"/tmp/app", "./-notflag", "http://example.com", "192.168.1.10", "scanme.nmap.org:443"} {
+		if err := ValidateTarget(ok); err != nil {
+			t.Errorf("合法 target %q 不應回錯 實際 %v", ok, err)
+		}
+	}
+	/* 以 - 開頭者會被引擎當旗標解析 屬引數走私 應拒絕 */
+	for _, bad := range []string{"", "  ", "--output=/etc/x", "-rf", "--config=http://evil/rules.yml"} {
+		if err := ValidateTarget(bad); err == nil {
+			t.Errorf("非法 target %q 應回錯", bad)
+		}
+	}
+}

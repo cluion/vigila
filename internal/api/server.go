@@ -62,6 +62,7 @@ func New(db *sql.DB) *Server {
 		r.Get("/engines", s.listEngines)
 		r.Post("/engines/{name}/docker", s.setEngineDocker)
 		r.Post("/engines/{name}/install", s.installEngine)
+		r.Post("/uploads/scan", s.uploadAndScan)
 	})
 
 	/* SSE 掃描進度事件 */

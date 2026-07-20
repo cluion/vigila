@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api, subscribeEvents, type ScanStat, type Engine } from "@/lib/api";
 import { formatTime, formatDuration } from "@/lib/constants";
 import { SeverityBadge, StatusBadge, EngineBadge } from "@/components/badges";
 import { TrendChart } from "@/components/TrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
+import { Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* 掃描列表頁 儀表板 */
@@ -17,6 +17,7 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
   const [engines, setEngines] = useState<Engine[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exclude, setExclude] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = () => {
     api
@@ -71,6 +72,29 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
     });
   };
 
+  /* 上傳壓縮包掃描 選檔後立即上傳 共用目前的引擎多選與排除設定 */
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    /* 重置 input value 讓相同檔案可重複選取 */
+    e.target.value = "";
+    setScanProgress(`上傳中 ${file.name} ...`);
+    const excludes = exclude
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    try {
+      await api.uploadAndScan(file, {
+        engines: selected.size > 0 ? [...selected] : undefined,
+        exclude: excludes.length > 0 ? excludes : undefined,
+      });
+      /* 上傳成功後 SSE 會接手進度顯示 scan_started/scan_completed */
+    } catch (err) {
+      setScanProgress("");
+      setError((err as Error).message);
+    }
+  };
+
   /* 刪除掃描 阻止冒泡避免開啟詳情 確認後刪除並刷新 */
   const removeScan = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -110,6 +134,22 @@ export function ScanListPage({ onOpen }: { onOpen: (id: string) => void }) {
         />
         <Button onClick={triggerScan} disabled={!!scanProgress}>
           掃描
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip,.tar.gz,.tgz"
+          className="hidden"
+          onChange={onUpload}
+        />
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={!!scanProgress}
+          title="上傳 zip 或 tar.gz 壓縮包掃描 上限 100MB"
+        >
+          <Upload className="size-4" />
+          上傳
         </Button>
         {scanProgress && (
           <span className="ml-1 text-[13px] text-indigo animate-pulse">{scanProgress}</span>

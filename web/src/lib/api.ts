@@ -245,6 +245,28 @@ export const api = {
     }
     return res.json();
   },
+  uploadAndScan: async (
+    file: File,
+    opts?: { engines?: string[]; exclude?: string[] },
+  ): Promise<{ message: string; target: string }> => {
+    const form = new FormData();
+    form.append("file", file);
+    if (opts?.engines && opts.engines.length > 0) {
+      form.append("engines", opts.engines.join(","));
+    }
+    if (opts?.exclude && opts.exclude.length > 0) {
+      form.append("exclude", opts.exclude.join(","));
+    }
+    /* FormData 不設 Content-Type 瀏覽器自動加 multipart boundary */
+    const res = await fetch(`${BASE}/uploads/scan`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
 };
 
 /* SSE 事件訂閱 回傳 cleanup 函數 */

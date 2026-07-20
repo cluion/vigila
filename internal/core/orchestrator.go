@@ -34,6 +34,7 @@ type Orchestrator struct {
 	onEvent       EventFn
 	triggerSource string
 	sbom          bool
+	projectName   string // 非空時覆蓋由 target 推導的 project 名 供上傳等 target 為暫存路徑的情境
 }
 
 /* New 建立 Orchestrator 需傳入 sqlc Queries */
@@ -59,6 +60,17 @@ func (o *Orchestrator) WithTriggerSource(src string) *Orchestrator {
 	return o
 }
 
+/*
+	WithProjectName 覆蓋 project 名稱
+
+上傳掃描的 target 為隨機暫存目錄 若用它推導 project 名 同一壓縮包每次都建新 project
+去重與 diff 皆失效 故以穩定的壓縮包檔名作 project 名 讓重複上傳歸於同一 project
+*/
+func (o *Orchestrator) WithProjectName(name string) *Orchestrator {
+	o.projectName = name
+	return o
+}
+
 /* emit 推播事件 onEvent 為 nil 時跳過 */
 func (o *Orchestrator) emit(eventType string, data interface{}) {
 	if o.onEvent != nil {
@@ -73,8 +85,10 @@ type ScanResult struct {
 	BySeverity   map[model.Severity]int
 	ByEngine     map[string]int
 	DurationMs   int64
-	SBOMPackages int   // 產出的 SBOM 套件數 未產 SBOM 為 0
-	SBOMErr      error // SBOM 產生錯誤 不影響 scan 成敗
+	SBOMPackages int      // 產出的 SBOM 套件數 未產 SBOM 為 0
+	SBOMErr      error    // SBOM 產生錯誤 不影響 scan 成敗
+	Ran          int      // 實際執行的引擎數 未安裝而略過的不計入
+	Skipped      []string // 因未安裝而略過的引擎名稱
 	Err          error
 }
 
@@ -180,7 +194,10 @@ type scanContext struct {
 
 /* beginScan 建立 project 與 scan 回傳上下文 profileName 非空時記錄於 scan */
 func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType string, profileName string, failFast bool) (*scanContext, error) {
-	projectName := deriveProjectName(target)
+	projectName := o.projectName
+	if projectName == "" {
+		projectName = deriveProjectName(target)
+	}
 	projectID := ulid.Make().String()
 	project, err := o.q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{
 		ID:   projectID,
@@ -243,8 +260,15 @@ func (o *Orchestrator) runAndFinish(ctx context.Context, sc *scanContext, scanne
 
 	completed := time.Now()
 	status := "completed"
-	if result.Err != nil {
+	switch {
+	case result.Err != nil:
 		status = "failed"
+	case result.Ran == 0:
+		/* 所有引擎皆未安裝 無一執行 掃描未達成任何目的 標為 failed */
+		status = "failed"
+		if result.Err == nil && len(result.Skipped) > 0 {
+			result.Err = fmt.Errorf("所有引擎皆未安裝 已略過: %s", strings.Join(result.Skipped, " "))
+		}
 	}
 	_, _ = o.q.UpdateScanStatus(ctx, sqlc.UpdateScanStatusParams{
 		ID:          sc.scanID,
@@ -325,15 +349,30 @@ func (o *Orchestrator) runEngine(ctx context.Context, s scanner.Scanner, sc *sca
 		"engine":  s.Name(),
 	})
 
+	/*
+		引擎未安裝屬預期常態 尤其 --engine all 時本機未必裝齊
+		不視為掃描失敗 記為 skipped 的 engine_run 保持事件與 DB 一致
+		不污染 result.Err 讓其他已裝引擎的結果仍計為 completed
+	*/
 	if err := s.CheckInstalled(); err != nil {
-		result.Err = err
+		result.Skipped = append(result.Skipped, s.Name())
+		msg := fmt.Sprintf("引擎未安裝: %v", err)
+		_, _ = o.q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
+			ID:           ulid.Make().String(),
+			ScanID:       sc.scanID,
+			Engine:       s.Name(),
+			Category:     string(s.Category()),
+			Status:       "skipped",
+			ErrorMessage: &msg,
+		})
 		o.emit("engine_completed", map[string]interface{}{
 			"scan_id": sc.scanID,
 			"engine":  s.Name(),
-			"status":  "failed",
+			"status":  "skipped",
 		})
 		return
 	}
+	result.Ran++
 
 	engineRunID := ulid.Make().String()
 	runStarted := time.Now()

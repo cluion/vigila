@@ -47,7 +47,7 @@ func seedScan(t *testing.T, q *sqlc.Queries, id, projectID, target string) {
 /* seedFinding 建立一筆 finding 供測試 */
 func seedFinding(t *testing.T, q *sqlc.Queries, id, projectID, scanID, runID, severity string) {
 	t.Helper()
-	_, err := q.UpsertFinding(context.Background(), sqlc.UpsertFindingParams{
+	row, err := q.UpsertFinding(context.Background(), sqlc.UpsertFindingParams{
 		ID:          id,
 		ProjectID:   projectID,
 		ScanID:      scanID,
@@ -61,6 +61,12 @@ func seedFinding(t *testing.T, q *sqlc.Queries, id, projectID, scanID, runID, se
 	})
 	if err != nil {
 		t.Fatalf("建立測試 finding 失敗: %v", err)
+	}
+	/* 與 orchestrator 一致 每筆 finding 同時記入 scan_findings 供 per-scan 還原 */
+	if err := q.CreateScanFinding(context.Background(), sqlc.CreateScanFindingParams{
+		ScanID: scanID, FindingID: row.ID, HashCode: row.HashCode,
+	}); err != nil {
+		t.Fatalf("建立測試 scan_finding 失敗: %v", err)
 	}
 }
 

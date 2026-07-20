@@ -54,6 +54,17 @@ func (q *Queries) CountFindingsByScan(ctx context.Context, scanID string) (int64
 	return count, err
 }
 
+const countFindingsByScanAssoc = `-- name: CountFindingsByScanAssoc :one
+SELECT COUNT(*) FROM scan_findings WHERE scan_id = ?
+`
+
+func (q *Queries) CountFindingsByScanAssoc(ctx context.Context, scanID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFindingsByScanAssoc, scanID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countFindingsBySeverity = `-- name: CountFindingsBySeverity :many
 SELECT severity, COUNT(*) AS count
 FROM findings
@@ -110,6 +121,42 @@ func (q *Queries) CountFindingsBySeverityByScan(ctx context.Context, scanID stri
 	var items []CountFindingsBySeverityByScanRow
 	for rows.Next() {
 		var i CountFindingsBySeverityByScanRow
+		if err := rows.Scan(&i.Severity, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countFindingsBySeverityByScanAssoc = `-- name: CountFindingsBySeverityByScanAssoc :many
+SELECT f.severity, COUNT(*) AS count
+FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?
+GROUP BY f.severity
+`
+
+type CountFindingsBySeverityByScanAssocRow struct {
+	Severity string `json:"severity"`
+	Count    int64  `json:"count"`
+}
+
+func (q *Queries) CountFindingsBySeverityByScanAssoc(ctx context.Context, scanID string) ([]CountFindingsBySeverityByScanAssocRow, error) {
+	rows, err := q.db.QueryContext(ctx, countFindingsBySeverityByScanAssoc, scanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountFindingsBySeverityByScanAssocRow
+	for rows.Next() {
+		var i CountFindingsBySeverityByScanAssocRow
 		if err := rows.Scan(&i.Severity, &i.Count); err != nil {
 			return nil, err
 		}
@@ -681,6 +728,75 @@ func (q *Queries) ListFindingsByScan(ctx context.Context, scanID string) ([]Find
 	return items, nil
 }
 
+const listFindingsByScanAssoc = `-- name: ListFindingsByScanAssoc :many
+SELECT f.id, f.project_id, f.scan_id, f.engine_run_id, f.engine, f.category, f.rule_id, f.title, f.description, f.severity, f.cvss_score, f.cvss_vector, f.cwe, f.file_path, f.start_line, f.end_line, f.start_col, f.end_col, f.snippet, f.pkg_name, f.installed_version, f.fixed_version, f.secret_type, f.url, f.host, f.port, f.method, f.references_json, f.unique_id_from_tool, f.hash_code, f.status, f.created_at FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?
+ORDER BY
+  CASE f.severity
+    WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
+    WHEN 'LOW' THEN 1 ELSE 0
+  END DESC
+`
+
+// findings actually observed by a scan, reconstructed via scan_findings.
+// findings.scan_id migrates on later upserts, so a plain WHERE scan_id is wrong.
+func (q *Queries) ListFindingsByScanAssoc(ctx context.Context, scanID string) ([]Finding, error) {
+	rows, err := q.db.QueryContext(ctx, listFindingsByScanAssoc, scanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Finding
+	for rows.Next() {
+		var i Finding
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ScanID,
+			&i.EngineRunID,
+			&i.Engine,
+			&i.Category,
+			&i.RuleID,
+			&i.Title,
+			&i.Description,
+			&i.Severity,
+			&i.CvssScore,
+			&i.CvssVector,
+			&i.Cwe,
+			&i.FilePath,
+			&i.StartLine,
+			&i.EndLine,
+			&i.StartCol,
+			&i.EndCol,
+			&i.Snippet,
+			&i.PkgName,
+			&i.InstalledVersion,
+			&i.FixedVersion,
+			&i.SecretType,
+			&i.Url,
+			&i.Host,
+			&i.Port,
+			&i.Method,
+			&i.ReferencesJson,
+			&i.UniqueIDFromTool,
+			&i.HashCode,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFindingsOnlyInScan = `-- name: ListFindingsOnlyInScan :many
 SELECT f.id, f.project_id, f.scan_id, f.engine_run_id, f.engine, f.category, f.rule_id, f.title, f.description, f.severity, f.cvss_score, f.cvss_vector, f.cwe, f.file_path, f.start_line, f.end_line, f.start_col, f.end_col, f.snippet, f.pkg_name, f.installed_version, f.fixed_version, f.secret_type, f.url, f.host, f.port, f.method, f.references_json, f.unique_id_from_tool, f.hash_code, f.status, f.created_at FROM scan_findings sf
 JOIN findings f ON f.id = sf.finding_id
@@ -1103,6 +1219,15 @@ ON CONFLICT(project_id, hash_code) DO UPDATE SET
   scan_id = excluded.scan_id,
   engine_run_id = excluded.engine_run_id,
   severity = excluded.severity,
+  -- refresh descriptive fields from the latest scan; keep old value when the new one is NULL
+  title = excluded.title,
+  description = COALESCE(excluded.description, findings.description),
+  cvss_score = COALESCE(excluded.cvss_score, findings.cvss_score),
+  cvss_vector = COALESCE(excluded.cvss_vector, findings.cvss_vector),
+  cwe = COALESCE(excluded.cwe, findings.cwe),
+  fixed_version = COALESCE(excluded.fixed_version, findings.fixed_version),
+  snippet = COALESCE(excluded.snippet, findings.snippet),
+  references_json = COALESCE(excluded.references_json, findings.references_json),
   status = CASE WHEN findings.status = 'resolved' THEN 'open' ELSE findings.status END
 RETURNING id, project_id, scan_id, engine_run_id, engine, category, rule_id, title, description, severity, cvss_score, cvss_vector, cwe, file_path, start_line, end_line, start_col, end_col, snippet, pkg_name, installed_version, fixed_version, secret_type, url, host, port, method, references_json, unique_id_from_tool, hash_code, status, created_at
 `

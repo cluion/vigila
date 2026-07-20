@@ -194,7 +194,9 @@ func TestFailFastStopsRemainingEngines(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			orch := New(q)
-			broken := &fakeScanner{name: "broken", checkErr: errors.New("未安裝")}
+			/* exit code 2 非 findings 慣例 視為真正執行失敗 觸發 fail-fast
+			   未安裝的引擎現在會被略過而非視為失敗 見 TestUninstalledEngineSkipped */
+			broken := &fakeScanner{name: "broken", exitCode: 2}
 			second := &fakeScanner{name: "second"}
 
 			sc, err := orch.beginScan(ctx, "/tmp/target", "profile", "test-ff", tc.failFast)
@@ -216,7 +218,7 @@ func TestRunProfilePassesFailFast(t *testing.T) {
 	ctx := context.Background()
 	q := openTestDB(t)
 
-	broken := &fakeScanner{name: "ff-broken", checkErr: errors.New("未安裝")}
+	broken := &fakeScanner{name: "ff-broken", exitCode: 2}
 	second := &fakeScanner{name: "ff-second"}
 	scanner.Register(broken)
 	scanner.Register(second)
@@ -235,6 +237,91 @@ func TestRunProfilePassesFailFast(t *testing.T) {
 	}
 	if second.ran {
 		t.Error("FailFast profile 首引擎失敗後 不應執行第二個引擎")
+	}
+}
+
+/*
+	TestUninstalledEngineSkipped 多引擎掃描中 未安裝的引擎應被略過而非使整場 scan 失敗
+
+已裝引擎的 findings 仍寫入 scan 狀態為 completed 未裝引擎記為 skipped 的 engine_run
+*/
+func TestUninstalledEngineSkipped(t *testing.T) {
+	ctx := context.Background()
+	q := openTestDB(t)
+	orch := New(q)
+
+	missing := &fakeScanner{name: "missing", checkErr: errors.New("未安裝")}
+	ok := &fakeScanner{name: "ok", findings: []model.Finding{fakeFinding("rule-ok")}}
+
+	sc, err := orch.beginScan(ctx, "/tmp/target", "multi", "", false)
+	if err != nil {
+		t.Fatalf("beginScan 失敗: %v", err)
+	}
+	opts := map[string]scanner.Options{"missing": {}, "ok": {}}
+	result, runErr := orch.runAndFinish(ctx, sc, []scanner.Scanner{missing, ok}, "/tmp/target", opts)
+	if runErr != nil {
+		t.Fatalf("有一個引擎成功時 掃描不應回錯: %v", runErr)
+	}
+
+	scan, err := q.GetScan(ctx, result.ScanID)
+	if err != nil {
+		t.Fatalf("查詢 scan 失敗: %v", err)
+	}
+	if scan.Status != "completed" {
+		t.Errorf("掃描狀態應為 completed 實際為 %s", scan.Status)
+	}
+	if result.Total != 1 {
+		t.Errorf("已裝引擎的 finding 應寫入 實際 Total=%d", result.Total)
+	}
+	if len(result.Skipped) != 1 || result.Skipped[0] != "missing" {
+		t.Errorf("未裝引擎應記於 Skipped 實際 %v", result.Skipped)
+	}
+
+	runs, err := q.ListEngineRunsByScan(ctx, result.ScanID)
+	if err != nil {
+		t.Fatalf("查詢 engine_runs 失敗: %v", err)
+	}
+	var skipped, completed int
+	for _, r := range runs {
+		switch r.Status {
+		case "skipped":
+			skipped++
+		case "completed":
+			completed++
+		}
+	}
+	if skipped != 1 || completed != 1 {
+		t.Errorf("應有 1 skipped 與 1 completed engine_run 實際 skipped=%d completed=%d", skipped, completed)
+	}
+}
+
+/*
+	TestAllEnginesUninstalledFails 所有引擎皆未安裝時 掃描無一執行 應標為 failed
+*/
+func TestAllEnginesUninstalledFails(t *testing.T) {
+	ctx := context.Background()
+	q := openTestDB(t)
+	orch := New(q)
+
+	a := &fakeScanner{name: "a", checkErr: errors.New("未安裝")}
+	b := &fakeScanner{name: "b", checkErr: errors.New("未安裝")}
+
+	sc, err := orch.beginScan(ctx, "/tmp/target", "multi", "", false)
+	if err != nil {
+		t.Fatalf("beginScan 失敗: %v", err)
+	}
+	opts := map[string]scanner.Options{"a": {}, "b": {}}
+	result, runErr := orch.runAndFinish(ctx, sc, []scanner.Scanner{a, b}, "/tmp/target", opts)
+	if runErr == nil {
+		t.Fatal("所有引擎皆未安裝 應回錯")
+	}
+
+	scan, err := q.GetScan(ctx, result.ScanID)
+	if err != nil {
+		t.Fatalf("查詢 scan 失敗: %v", err)
+	}
+	if scan.Status != "failed" {
+		t.Errorf("掃描狀態應為 failed 實際為 %s", scan.Status)
 	}
 }
 

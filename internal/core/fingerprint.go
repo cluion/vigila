@@ -17,7 +17,7 @@ import (
 	IaC    engine + rule_id + file_path + start_line
 	SCA    engine + cve + pkg_name + installed_version
 	Secret engine + rule_id + file_path + start_line
-	DAST   engine + rule_id + url
+	DAST   engine + rule_id + url + method
 	VA     engine + rule_id + host + port
 */
 func Fingerprint(f model.Finding) string {
@@ -33,7 +33,7 @@ func Fingerprint(f model.Finding) string {
 	case model.CategorySCA:
 		parts = append(parts, f.RuleID, f.PkgName, f.InstalledVersion)
 	case model.CategoryDAST:
-		parts = append(parts, f.RuleID, f.URL)
+		parts = append(parts, f.RuleID, f.URL, f.Method)
 	case model.CategoryVA:
 		parts = append(parts, f.RuleID, f.Host, f.Port)
 	default:

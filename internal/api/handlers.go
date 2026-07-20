@@ -102,7 +102,8 @@ func (s *Server) listScanFindings(w http.ResponseWriter, r *http.Request) {
 	ctx := ensureCtx(r)
 	id := chi.URLParam(r, "id")
 
-	findings, err := s.q.ListFindingsByScan(ctx, id)
+	/* 以 scan_findings 還原本次掃描實際觀察到的集合 findings.scan_id 會被後續掃描遷移 */
+	findings, err := s.q.ListFindingsByScanAssoc(ctx, id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "查詢 findings 失敗")
 		return
@@ -268,10 +269,10 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		}
 
 		st := scanStat{Scan: dto}
-		st.Findings, _ = s.q.CountFindingsByScan(ctx, sc.ID)
+		st.Findings, _ = s.q.CountFindingsByScanAssoc(ctx, sc.ID)
 
-		/* severity 分布 以單次 scan 為維度 */
-		sv, _ := s.q.CountFindingsBySeverityByScan(ctx, sc.ID)
+		/* severity 分布 以單次 scan 為維度 經 scan_findings 還原 */
+		sv, _ := s.q.CountFindingsBySeverityByScanAssoc(ctx, sc.ID)
 		for _, row := range sv {
 			switch row.Severity {
 			case "CRITICAL":
@@ -331,8 +332,8 @@ func (s *Server) trends(w http.ResponseWriter, r *http.Request) {
 
 	points := make([]trendPoint, 0, len(scans))
 	for i, sc := range scans {
-		/* 該次掃描歸屬的 findings 總數 */
-		total, _ := s.q.CountFindingsByScan(ctx, sc.ID)
+		/* 該次掃描觀察到的 findings 總數 與 added/resolved 同走 scan_findings 事件表 避免自相矛盾 */
+		total, _ := s.q.CountFindingsByScanAssoc(ctx, sc.ID)
 
 		pt := trendPoint{
 			ScanID:    sc.ID,

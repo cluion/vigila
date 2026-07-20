@@ -23,6 +23,9 @@ func NormalizeSeverity(s string) model.Severity {
 		return model.SeverityMedium
 	case "LOW":
 		return model.SeverityLow
+	case "NEGLIGIBLE":
+		/* Grype 最低風險等級 對應 LOW */
+		return model.SeverityLow
 	case "ERROR":
 		return model.SeverityHigh
 	case "WARNING":

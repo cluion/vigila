@@ -138,6 +138,15 @@ ON CONFLICT(project_id, hash_code) DO UPDATE SET
   scan_id = excluded.scan_id,
   engine_run_id = excluded.engine_run_id,
   severity = excluded.severity,
+  -- refresh descriptive fields from the latest scan; keep old value when the new one is NULL
+  title = excluded.title,
+  description = COALESCE(excluded.description, findings.description),
+  cvss_score = COALESCE(excluded.cvss_score, findings.cvss_score),
+  cvss_vector = COALESCE(excluded.cvss_vector, findings.cvss_vector),
+  cwe = COALESCE(excluded.cwe, findings.cwe),
+  fixed_version = COALESCE(excluded.fixed_version, findings.fixed_version),
+  snippet = COALESCE(excluded.snippet, findings.snippet),
+  references_json = COALESCE(excluded.references_json, findings.references_json),
   status = CASE WHEN findings.status = 'resolved' THEN 'open' ELSE findings.status END
 RETURNING *;
 
@@ -164,6 +173,28 @@ ORDER BY
     WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
     WHEN 'LOW' THEN 1 ELSE 0
   END DESC;
+
+-- name: ListFindingsByScanAssoc :many
+-- findings actually observed by a scan, reconstructed via scan_findings.
+-- findings.scan_id migrates on later upserts, so a plain WHERE scan_id is wrong.
+SELECT f.* FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?
+ORDER BY
+  CASE f.severity
+    WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2
+    WHEN 'LOW' THEN 1 ELSE 0
+  END DESC;
+
+-- name: CountFindingsByScanAssoc :one
+SELECT COUNT(*) FROM scan_findings WHERE scan_id = ?;
+
+-- name: CountFindingsBySeverityByScanAssoc :many
+SELECT f.severity, COUNT(*) AS count
+FROM scan_findings sf
+JOIN findings f ON f.id = sf.finding_id
+WHERE sf.scan_id = ?
+GROUP BY f.severity;
 
 -- name: CountCommonFindings :one
 SELECT COUNT(*) FROM scan_findings a

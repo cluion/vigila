@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cluion/vigila/internal/core"
@@ -80,10 +81,14 @@ func (s *Server) uploadAndScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* 組 orchestrator 與 startScan 一致 web 觸發 + SSE 進度推播 */
-	orch := core.New(s.q).WithTriggerSource("web").WithEvent(func(eventType string, data interface{}) {
-		s.broker.Publish(Event{Type: eventType, Data: data})
-	})
+	/* 組 orchestrator 與 startScan 一致 web 觸發 + SSE 進度推播
+	   以壓縮包檔名作 project 名 讓重複上傳同一檔案歸於同一 project 去重與 diff 才有效 */
+	orch := core.New(s.q).
+		WithTriggerSource("web").
+		WithProjectName(filepath.Base(header.Filename)).
+		WithEvent(func(eventType string, data interface{}) {
+			s.broker.Publish(Event{Type: eventType, Data: data})
+		})
 	ctx := context.Background()
 	opts := scanner.Options{Exclude: excludes}
 

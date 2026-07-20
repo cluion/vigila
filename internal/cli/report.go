@@ -49,7 +49,8 @@ func NewReportCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("查詢 engine_runs 失敗: %w", err)
 			}
-			findings, err := q.ListFindingsByScan(ctx, scanID)
+			/* 以 scan_findings 還原本次掃描實際觀察到的集合 findings.scan_id 會被後續掃描遷移 */
+			findings, err := q.ListFindingsByScanAssoc(ctx, scanID)
 			if err != nil {
 				return fmt.Errorf("查詢 findings 失敗: %w", err)
 			}

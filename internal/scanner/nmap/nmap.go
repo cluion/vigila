@@ -78,9 +78,18 @@ func (s *Scanner) BuildCommand(target string, opts scanner.Options) (string, []s
 	return binaryName, args
 }
 
-/* Run 執行掃描 用共用 subprocess 實作 stdout 即 XML */
+/*
+	Run 執行掃描 依來源分流 stdout 即 XML
+
+docker 來源用官方 image 不掛載 直接把目標 host 傳入容器
+容器 host 網路 network_mode host 由 compose service 承擔 掃得到內網主機
+系統來源走本機 subprocess
+*/
 func (s *Scanner) Run(ctx context.Context, target string, opts scanner.Options) (*scanner.Result, error) {
 	binary, args := s.BuildCommand(target, opts)
+	if scanner.ResolveSourceFor(s.Name(), binary) == scanner.SourceDocker {
+		return scanner.DockerRunNoMount(ctx, s.Name(), args)
+	}
 	return scanner.DefaultRun(ctx, binary, args)
 }
 

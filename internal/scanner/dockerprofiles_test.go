@@ -7,11 +7,8 @@ import (
 )
 
 func TestDockerCapable(t *testing.T) {
-	if !DockerCapable("semgrep") || !DockerCapable("zap") {
-		t.Error("semgrep zap 應為 docker-capable")
-	}
-	if DockerCapable("nmap") {
-		t.Error("nmap 本輪不支援 docker")
+	if !DockerCapable("semgrep") || !DockerCapable("zap") || !DockerCapable("nmap") {
+		t.Error("semgrep zap nmap 應為 docker-capable")
 	}
 }
 
@@ -53,9 +50,18 @@ func TestSetDockerProfile(t *testing.T) {
 		t.Error("grype 應保留")
 	}
 
-	/* 非 docker-capable 引擎啟用應回錯 */
-	if err := SetDockerProfile("nmap", true); err == nil {
-		t.Error("nmap 不支援 docker 啟用應回錯")
+	/* nmap 已支援 docker 勾選後再取消 應成功且冪等 */
+	if err := SetDockerProfile("nmap", true); err != nil {
+		t.Errorf("nmap 啟用應成功 實際 %v", err)
+	}
+	if !DockerProfileEnabled("nmap") {
+		t.Error("nmap 啟用後應已勾選")
+	}
+	if err := SetDockerProfile("nmap", false); err != nil {
+		t.Errorf("nmap 取消應成功 實際 %v", err)
+	}
+	if DockerProfileEnabled("nmap") {
+		t.Error("nmap 取消後應移除")
 	}
 }
 

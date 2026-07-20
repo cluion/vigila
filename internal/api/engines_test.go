@@ -158,9 +158,18 @@ func TestSetEngineDocker(t *testing.T) {
 		t.Error("trivy 應已取消 docker profile")
 	}
 
-	/* 非 docker-capable 引擎應回 400 */
-	if rec := post("nmap", `{"enabled":true}`); rec.Code != http.StatusBadRequest {
-		t.Errorf("nmap 不支援 docker 應回 400 實際 %d", rec.Code)
+	/* nmap 已支援 docker 勾選應回 200 並確實寫入 profile */
+	if rec := post("nmap", `{"enabled":true}`); rec.Code != http.StatusOK {
+		t.Errorf("nmap 支援 docker 勾選應回 200 實際 %d", rec.Code)
+	}
+	if !scanner.DockerProfileEnabled("nmap") {
+		t.Error("nmap 應已勾選 docker profile")
+	}
+	if rec := post("nmap", `{"enabled":false}`); rec.Code != http.StatusOK {
+		t.Errorf("nmap 取消應回 200 實際 %d", rec.Code)
+	}
+	if scanner.DockerProfileEnabled("nmap") {
+		t.Error("nmap 取消後應移除 docker profile")
 	}
 }
 

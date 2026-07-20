@@ -14,7 +14,8 @@ import (
 	dockerCapable 為支援以 docker 執行的引擎
 
 只收 stdout 型路徑引擎 掛載目標路徑 捕獲 stdout 即可
-gitleaks 需寫檔 nuclei zap 為 URL 目標且 zap 寫檔 nmap 為 host 目標需 network 皆另行處理
+gitleaks 需寫檔 nuclei zap 為 URL 目標且 zap 寫檔 皆另行處理
+nmap 為 host 目標 不掛載 沿用 DockerRunNoMount 容器 host 網路由 compose service 承擔
 */
 var dockerCapable = map[string]bool{
 	"semgrep":     true,
@@ -26,6 +27,7 @@ var dockerCapable = map[string]bool{
 	"zap":         true,
 	"nuclei":      true,
 	"gitleaks":    true,
+	"nmap":        true,
 }
 
 /*

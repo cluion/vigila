@@ -66,15 +66,15 @@ func TestDockerEnabled(t *testing.T) {
 		}
 	})
 
-	t.Run("nmap 需 host 網路 尚未接入 docker", func(t *testing.T) {
+	t.Run("nmap host 目標支援 docker 需 compose host 網路", func(t *testing.T) {
 		t.Setenv("COMPOSE_PROFILES", "nmap")
-		if dockerEnabled("nmap") {
-			t.Error("nmap 尚未支援 docker 應回 false")
+		if !dockerEnabled("nmap") {
+			t.Error("nmap 已支援 docker 應回 true")
 		}
 	})
 
-	t.Run("osv-scanner checkov zap nuclei gitleaks 皆支援 docker", func(t *testing.T) {
-		for _, e := range []string{"osv-scanner", "checkov", "zap", "nuclei", "gitleaks"} {
+	t.Run("osv-scanner checkov zap nuclei gitleaks nmap 皆支援 docker", func(t *testing.T) {
+		for _, e := range []string{"osv-scanner", "checkov", "zap", "nuclei", "gitleaks", "nmap"} {
 			t.Setenv("COMPOSE_PROFILES", e)
 			if !dockerEnabled(e) {
 				t.Errorf("%s 已啟用 profile 應支援 docker", e)

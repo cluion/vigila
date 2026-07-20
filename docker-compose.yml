@@ -58,8 +58,13 @@ services:
     image: ghcr.io/gitleaks/gitleaks:latest
     profiles: [gitleaks]
 
-  # ───── 尚未支援 docker 執行 ─────
-  # nmap   VA host 目標 需 network_mode host
+  # nmap 為 host 目標 容器需 host 網路才能掃到內網主機
+  # 注意 network_mode: host 僅 Linux Docker 與 OrbStack 真正生效
+  # Docker Desktop (macOS/Windows) 不支援 請改用 managed 或 system 安裝
+  nmap:
+    image: instrumentisto/nmap:latest
+    profiles: [nmap]
+    network_mode: host
 
 volumes:
   trivy-cache:

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -19,12 +20,17 @@ import (
 /* NewServeCmd 建立 serve 子命令 啟動本機網頁伺服器 */
 func NewServeCmd() *cobra.Command {
 	var addr string
+	var authToken string
 
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "啟動網頁伺服器",
-		Long:  "啟動本機網頁伺服器 檢視掃描結果 預設 http://localhost:7780",
+		Long:  "啟動本機網頁伺服器 檢視掃描結果 預設 http://localhost:7780\n\n綁 0.0.0.0 對外或多人共用時 建議以 --auth-token 或 VIGILA_AUTH_TOKEN 啟用存取 token",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			/* token 優先取旗標 再退回環境變數 空則不啟用認證 */
+			if authToken == "" {
+				authToken = os.Getenv("VIGILA_AUTH_TOKEN")
+			}
 			ctx := context.Background()
 			db, err := store.Open(ctx, store.Config{})
 			if err != nil {
@@ -39,7 +45,7 @@ func NewServeCmd() *cobra.Command {
 				log.Printf("已回收 %d 筆逾時未收尾的 running 掃描 標記為 failed", n)
 			}
 
-			srv := api.New(db)
+			srv := api.New(db, api.WithAuthToken(authToken))
 
 			/* 嵌入前端 SPA 靜態檔 */
 			distFS, err := fs.Sub(web.Dist, "dist")
@@ -56,6 +62,9 @@ func NewServeCmd() *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Vigila 網頁伺服器啟動於 http://%s\n", addr)
+			if authToken != "" {
+				fmt.Fprintf(out, "已啟用 token 認證 前端首次存取需輸入 token\n")
+			}
 			fmt.Fprintf(out, "按 Ctrl+C 停止\n")
 
 			return httpServer.ListenAndServe()
@@ -63,5 +72,6 @@ func NewServeCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&addr, "addr", "a", "localhost:7780", "監聽位址")
+	cmd.Flags().StringVar(&authToken, "auth-token", "", "啟用存取 token 認證 空則停用 亦可用 VIGILA_AUTH_TOKEN 環境變數")
 	return cmd
 }

@@ -1,9 +1,57 @@
 /* Vigila API client 對應 Go 後端的 REST endpoints */
 
 const BASE = "/api";
+const TOKEN_KEY = "vigila_token";
+
+/* 存取 token 持久化於 localStorage 供啟用認證的部署使用 未啟用時為空字串 */
+export function getToken(): string {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+export function setToken(t: string): void {
+  try {
+    localStorage.setItem(TOKEN_KEY, t);
+  } catch {
+    /* localStorage 不可用時忽略 */
+  }
+}
+export function clearToken(): void {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* 忽略 */
+  }
+}
+
+/* 收到 401 時觸發 由 App 註冊以彈出 token 輸入 */
+let unauthorizedHandler: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: () => void): void {
+  unauthorizedHandler = fn;
+}
+
+/* authInit 為請求附上 Authorization Bearer 標頭（有 token 時） */
+function authInit(init?: RequestInit): RequestInit {
+  const headers = new Headers(init?.headers);
+  const t = getToken();
+  if (t) headers.set("Authorization", `Bearer ${t}`);
+  return { ...init, headers };
+}
+
+/* apiFetch 統一注入認證標頭並集中處理 401 */
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(`${BASE}${path}`, authInit(init));
+  if (res.status === 401) {
+    if (unauthorizedHandler) unauthorizedHandler();
+    throw new Error("需要有效的存取 token 請重新輸入");
+  }
+  return res;
+}
 
 async function getJSON(path: string): Promise<any> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await apiFetch(path);
   if (!res.ok) {
     throw new Error(`API ${res.status}: ${await res.text()}`);
   }
@@ -167,7 +215,7 @@ export const api = {
   listScans: (): Promise<{ scans: Scan[] }> => getJSON("/scans"),
   getScan: (id: string): Promise<ScanDetail> => getJSON(`/scans/${id}`),
   deleteScan: async (id: string): Promise<{ deleted: string }> => {
-    const res = await fetch(`${BASE}/scans/${id}`, { method: "DELETE" });
+    const res = await apiFetch(`/scans/${id}`, { method: "DELETE" });
     if (!res.ok) {
       throw new Error(`API ${res.status}: ${await res.text()}`);
     }
@@ -200,7 +248,7 @@ export const api = {
     if (opts?.exclude && opts.exclude.length > 0) {
       body.exclude = opts.exclude;
     }
-    const res = await fetch(`${BASE}/scans`, {
+    const res = await apiFetch(`/scans`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -211,7 +259,7 @@ export const api = {
     return res.json();
   },
   updateFindingStatus: async (id: string, status: string): Promise<Finding> => {
-    const res = await fetch(`${BASE}/findings/${id}`, {
+    const res = await apiFetch(`/findings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -227,7 +275,7 @@ export const api = {
     name: string,
     enabled: boolean,
   ): Promise<{ name: string; docker_enabled: boolean }> => {
-    const res = await fetch(`${BASE}/engines/${name}/docker`, {
+    const res = await apiFetch(`/engines/${name}/docker`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled }),
@@ -240,7 +288,7 @@ export const api = {
   installEngine: async (
     name: string,
   ): Promise<{ engine: string; version: string; path: string }> => {
-    const res = await fetch(`${BASE}/engines/${name}/install`, {
+    const res = await apiFetch(`/engines/${name}/install`, {
       method: "POST",
     });
     if (!res.ok) {
@@ -261,7 +309,7 @@ export const api = {
       form.append("exclude", opts.exclude.join(","));
     }
     /* FormData 不設 Content-Type 瀏覽器自動加 multipart boundary */
-    const res = await fetch(`${BASE}/uploads/scan`, {
+    const res = await apiFetch(`/uploads/scan`, {
       method: "POST",
       body: form,
     });
@@ -274,7 +322,10 @@ export const api = {
 
 /* SSE 事件訂閱 回傳 cleanup 函數 */
 export function subscribeEvents(onEvent: (type: string, data: any) => void): () => void {
-  const es = new EventSource(`${BASE}/events`);
+  /* EventSource 無法設標頭 認證 token 以 query 參數帶入 */
+  const t = getToken();
+  const url = t ? `${BASE}/events?token=${encodeURIComponent(t)}` : `${BASE}/events`;
+  const es = new EventSource(url);
   const types = ["scan_started", "scan_completed", "engine_started", "engine_completed", "connected"];
   types.forEach((t) => {
     es.addEventListener(t, (e: MessageEvent) => {

@@ -20,14 +20,27 @@ import (
 
 /* Server 為 Web API 伺服器 */
 type Server struct {
-	db     *sql.DB
-	q      *sqlc.Queries
-	broker *Broker
-	mux    *chi.Mux
+	db        *sql.DB
+	q         *sqlc.Queries
+	broker    *Broker
+	mux       *chi.Mux
+	authToken string // 非空時啟用 token 認證 空則放行（本機單人預設）
 }
 
-/* New 建立 Server 需傳入 DB */
-func New(db *sql.DB) *Server {
+/* Option 為 Server 的建構選項 */
+type Option func(*Server)
+
+/*
+	WithAuthToken 啟用 token 認證
+
+供團隊/暴露情境保護 API 空字串代表停用（本機單人預設 行為不變）
+*/
+func WithAuthToken(token string) Option {
+	return func(s *Server) { s.authToken = token }
+}
+
+/* New 建立 Server 需傳入 DB 選項可啟用認證等 */
+func New(db *sql.DB, opts ...Option) *Server {
 	q := sqlc.New(db)
 	broker := NewBroker()
 
@@ -36,14 +49,26 @@ func New(db *sql.DB) *Server {
 		q:      q,
 		broker: broker,
 	}
+	for _, o := range opts {
+		o(s)
+	}
+
+	/* 昂貴端點限流 每 IP 每分鐘 300 次 突發 60 寬鬆到不影響正常使用 僅擋洪流 */
+	limiter := newRateLimiter(300, 60)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
-	/* REST API */
+	/* REST API + SSE 皆套用認證與限流 */
 	r.Route("/api", func(r chi.Router) {
+		r.Use(s.authMiddleware)
+		r.Use(limiter.middleware)
+
+		/* SSE 掃描進度事件 置於群組內以套用認證 */
+		r.Get("/events", s.broker.ServeHTTP)
+
 		r.Get("/scans", s.listScans)
 		r.Post("/scans", s.startScan)
 		r.Get("/scans/{id}", s.getScan)
@@ -64,9 +89,6 @@ func New(db *sql.DB) *Server {
 		r.Post("/engines/{name}/install", s.installEngine)
 		r.Post("/uploads/scan", s.uploadAndScan)
 	})
-
-	/* SSE 掃描進度事件 */
-	r.Get("/api/events", s.broker.ServeHTTP)
 
 	s.mux = r
 	return s

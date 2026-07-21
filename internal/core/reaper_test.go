@@ -16,7 +16,7 @@ func TestReapStaleRunningScans(t *testing.T) {
 	ctx := context.Background()
 	q := openTestDB(t)
 
-	p, err := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, err := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	if err != nil {
 		t.Fatalf("建立 project 失敗: %v", err)
 	}

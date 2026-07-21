@@ -22,7 +22,7 @@ const testCycloneDX = `{
 func TestGetScanSBOM(t *testing.T) {
 	srv, q := newTestServer(t)
 	ctx := context.Background()
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "scan1", p.ID, "/tmp/a")
 
 	if _, err := q.CreateArtifact(ctx, sqlc.CreateArtifactParams{
@@ -82,7 +82,7 @@ func seedSBOM(t *testing.T, q *sqlc.Queries, scanID, content string) {
 func TestGetScanSBOMDiff(t *testing.T) {
 	srv, q := newTestServer(t)
 	ctx := context.Background()
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "old", p.ID, "/tmp/a")
 	seedScan(t, q, "new", p.ID, "/tmp/a")
 	seedSBOM(t, q, "old", `{"components":[{"type":"library","name":"django","version":"2.0.0","purl":"pkg:pypi/django@2.0.0"},{"type":"library","name":"flask","version":"0.12.2","purl":"pkg:pypi/flask@0.12.2"}]}`)
@@ -125,7 +125,7 @@ func TestGetScanSBOMDiff(t *testing.T) {
 func TestGetScanSBOMDiffMissing(t *testing.T) {
 	srv, q := newTestServer(t)
 	ctx := context.Background()
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "old", p.ID, "/tmp/a")
 	seedScan(t, q, "new", p.ID, "/tmp/a")
 	seedSBOM(t, q, "old", `{"components":[]}`)
@@ -141,7 +141,7 @@ func TestGetScanSBOMDiffMissing(t *testing.T) {
 func TestGetScanSBOMNotAvailable(t *testing.T) {
 	srv, q := newTestServer(t)
 	ctx := context.Background()
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "scan1", p.ID, "/tmp/a")
 
 	rec := httptest.NewRecorder()

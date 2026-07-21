@@ -45,7 +45,7 @@ func seedSBOMScan(t *testing.T, q *sqlc.Queries, projectID, content string) stri
 func seedProject(t *testing.T, q *sqlc.Queries, name string) string {
 	t.Helper()
 	id := ulid.Make().String()
-	if _, err := q.UpsertProjectByName(context.Background(), sqlc.UpsertProjectByNameParams{ID: id, Name: name}); err != nil {
+	if _, err := q.UpsertProject(context.Background(), sqlc.UpsertProjectParams{ID: id, Name: name, TargetKey: name}); err != nil {
 		t.Fatalf("建立 project 失敗: %v", err)
 	}
 	return id

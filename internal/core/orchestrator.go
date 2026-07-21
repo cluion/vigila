@@ -62,10 +62,10 @@ func (o *Orchestrator) WithTriggerSource(src string) *Orchestrator {
 }
 
 /*
-	WithProjectName 覆蓋 project 名稱
+	WithProjectName 覆蓋 project 名稱與身分鍵
 
-上傳掃描的 target 為隨機暫存目錄 若用它推導 project 名 同一壓縮包每次都建新 project
-去重與 diff 皆失效 故以穩定的壓縮包檔名作 project 名 讓重複上傳歸於同一 project
+上傳掃描的 target 為隨機暫存目錄 若用它推導身分 同一壓縮包每次都建新 project
+去重與 diff 皆失效 故以穩定的壓縮包檔名同時作顯示名與身分鍵 讓重複上傳歸於同一 project
 */
 func (o *Orchestrator) WithProjectName(name string) *Orchestrator {
 	o.projectName = name
@@ -197,14 +197,22 @@ type scanContext struct {
 
 /* beginScan 建立 project 與 scan 回傳上下文 profileName 非空時記錄於 scan */
 func (o *Orchestrator) beginScan(ctx context.Context, target string, scanType string, profileName string, failFast bool) (*scanContext, error) {
+	/*
+		身分鍵 target_key 決定「同一 project」名稱僅為顯示標籤 可重複
+		上傳掃描 target 為隨機暫存目錄 以穩定的壓縮包檔名（projectName override）作身分鍵
+		否則以正規化 target 為鍵 避免不同路徑的同名目錄被混為一個 project
+	*/
 	projectName := o.projectName
+	projectKey := o.projectName
 	if projectName == "" {
 		projectName = deriveProjectName(target)
+		projectKey = deriveProjectKey(target)
 	}
 	projectID := ulid.Make().String()
-	project, err := o.q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{
-		ID:   projectID,
-		Name: projectName,
+	project, err := o.q.UpsertProject(ctx, sqlc.UpsertProjectParams{
+		ID:        projectID,
+		Name:      projectName,
+		TargetKey: projectKey,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("建立 project 失敗: %w", err)
@@ -589,4 +597,29 @@ func deriveProjectName(target string) string {
 		return "default"
 	}
 	return name
+}
+
+/*
+deriveProjectKey 由 target 推導 project 身分鍵 同一 target 恆得同一鍵 不同 target 得不同鍵
+URL 取 scheme://host host:port 直接使用 檔案路徑取絕對正規化路徑
+不同路徑的同名目錄（~/work/api 與 ~/side/api）因絕對路徑不同 得以區分為兩個 project
+*/
+func deriveProjectKey(target string) string {
+	/* 含 scheme 視為 URL 取 scheme://host 忽略 path 同一站台歸一 project */
+	if strings.Contains(target, "://") {
+		if u, err := url.Parse(target); err == nil && u.Host != "" {
+			return u.Scheme + "://" + u.Host
+		}
+	}
+
+	/* 含連接埠的 host/IP 直接使用 與 deriveProjectName 對齊 */
+	if strings.Contains(target, ":") && !strings.ContainsAny(target, "/\\") {
+		return target
+	}
+
+	/* 檔案路徑取絕對路徑（依當前工作目錄解析並 Clean）確保 . 與相對路徑正規化為穩定鍵 */
+	if abs, err := filepath.Abs(target); err == nil {
+		return abs
+	}
+	return filepath.Clean(target)
 }

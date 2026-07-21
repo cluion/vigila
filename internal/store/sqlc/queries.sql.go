@@ -283,31 +283,6 @@ func (q *Queries) CreateEngineRun(ctx context.Context, arg CreateEngineRunParams
 	return i, err
 }
 
-const createProject = `-- name: CreateProject :one
-INSERT INTO projects (id, name, description) VALUES (?, ?, ?)
-  ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = CURRENT_TIMESTAMP
-  RETURNING id, name, description, created_at, updated_at
-`
-
-type CreateProjectParams struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-}
-
-func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
-	row := q.db.QueryRowContext(ctx, createProject, arg.ID, arg.Name, arg.Description)
-	var i Project
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createScan = `-- name: CreateScan :one
 INSERT INTO scans (id, project_id, target, scan_type, profile, status, trigger_source)
 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -480,7 +455,7 @@ func (q *Queries) GetLatestSBOMByScan(ctx context.Context, scanID string) (Artif
 const getProject = `-- name: GetProject :one
 
 
-SELECT id, name, description, created_at, updated_at FROM projects WHERE id = ?
+SELECT id, name, target_key, description, created_at, updated_at FROM projects WHERE id = ?
 `
 
 // Vigila SQL queries (consumed by sqlc to generate type-safe Go code).
@@ -501,6 +476,7 @@ func (q *Queries) GetProject(ctx context.Context, id string) (Project, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.TargetKey,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -508,16 +484,17 @@ func (q *Queries) GetProject(ctx context.Context, id string) (Project, error) {
 	return i, err
 }
 
-const getProjectByName = `-- name: GetProjectByName :one
-SELECT id, name, description, created_at, updated_at FROM projects WHERE name = ?
+const getProjectByTargetKey = `-- name: GetProjectByTargetKey :one
+SELECT id, name, target_key, description, created_at, updated_at FROM projects WHERE target_key = ?
 `
 
-func (q *Queries) GetProjectByName(ctx context.Context, name string) (Project, error) {
-	row := q.db.QueryRowContext(ctx, getProjectByName, name)
+func (q *Queries) GetProjectByTargetKey(ctx context.Context, targetKey string) (Project, error) {
+	row := q.db.QueryRowContext(ctx, getProjectByTargetKey, targetKey)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.TargetKey,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -911,7 +888,7 @@ func (q *Queries) ListProjectScansChronological(ctx context.Context, projectID s
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, name, description, created_at, updated_at FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?
+SELECT id, name, target_key, description, created_at, updated_at FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?
 `
 
 type ListProjectsParams struct {
@@ -931,6 +908,7 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]P
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.TargetKey,
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1352,24 +1330,33 @@ func (q *Queries) UpsertFinding(ctx context.Context, arg UpsertFindingParams) (F
 	return i, err
 }
 
-const upsertProjectByName = `-- name: UpsertProjectByName :one
-INSERT INTO projects (id, name, description) VALUES (?, ?, ?)
-  ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
-  RETURNING id, name, description, created_at, updated_at
+const upsertProject = `-- name: UpsertProject :one
+INSERT INTO projects (id, name, target_key, description) VALUES (?, ?, ?, ?)
+  ON CONFLICT(target_key) DO UPDATE SET name = excluded.name, updated_at = CURRENT_TIMESTAMP
+  RETURNING id, name, target_key, description, created_at, updated_at
 `
 
-type UpsertProjectByNameParams struct {
+type UpsertProjectParams struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
+	TargetKey   string  `json:"target_key"`
 	Description *string `json:"description"`
 }
 
-func (q *Queries) UpsertProjectByName(ctx context.Context, arg UpsertProjectByNameParams) (Project, error) {
-	row := q.db.QueryRowContext(ctx, upsertProjectByName, arg.ID, arg.Name, arg.Description)
+// Upsert keyed by target_key (identity); name is a mutable display label.
+// Re-scanning the same target maps to the same project row.
+func (q *Queries) UpsertProject(ctx context.Context, arg UpsertProjectParams) (Project, error) {
+	row := q.db.QueryRowContext(ctx, upsertProject,
+		arg.ID,
+		arg.Name,
+		arg.TargetKey,
+		arg.Description,
+	)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.TargetKey,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,

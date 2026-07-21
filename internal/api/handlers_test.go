@@ -75,7 +75,7 @@ func TestStatsCountsPerScan(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, err := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, err := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	if err != nil {
 		t.Fatalf("建立測試 project 失敗: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestUpdateFindingStatus(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, err := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, err := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	if err != nil {
 		t.Fatalf("建立測試 project 失敗: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestUpdateFindingStatusRejectsInvalid(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "scan1", p.ID, "/tmp/a")
 	run, _ := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
 		ID: "run1", ScanID: "scan1", Engine: "fake", Category: "SAST", Status: "completed",
@@ -222,7 +222,7 @@ func TestScanDiff(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "s1", p.ID, "/tmp/a")
 	seedScan(t, q, "s2", p.ID, "/tmp/a")
 	run, _ := q.CreateEngineRun(ctx, sqlc.CreateEngineRunParams{
@@ -286,7 +286,7 @@ func TestListScanFindingsEmptyReturnsArray(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	seedScan(t, q, "s1", p.ID, "/tmp/a")
 
 	rec := httptest.NewRecorder()
@@ -326,7 +326,7 @@ func TestTrends(t *testing.T) {
 	ctx := context.Background()
 	srv, q := newTestServer(t)
 
-	p, _ := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, _ := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 
 	/* 兩次掃描 時間明確區隔 scan1 早於 scan2 */
 	seedScanWithTime(t, q, "s1", p.ID, "/tmp/a", time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC))

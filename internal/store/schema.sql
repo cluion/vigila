@@ -11,13 +11,17 @@
 -- ============================================================================
 -- Asset layer
 -- ============================================================================
+-- name is a display label and may repeat (same-basename dirs at different paths).
+-- target_key is the identity: normalized target (abs path / URL host / host:port), unique.
 CREATE TABLE IF NOT EXISTS projects (
   id          TEXT PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  target_key  TEXT NOT NULL,
   description TEXT,
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_target_key ON projects(target_key);
 
 -- ============================================================================
 -- Scan layer (immutable history, event-sourced)

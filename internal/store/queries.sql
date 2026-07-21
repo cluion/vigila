@@ -14,20 +14,17 @@
 -- name: GetProject :one
 SELECT * FROM projects WHERE id = ?;
 
--- name: GetProjectByName :one
-SELECT * FROM projects WHERE name = ?;
+-- name: GetProjectByTargetKey :one
+SELECT * FROM projects WHERE target_key = ?;
 
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC LIMIT ? OFFSET ?;
 
--- name: CreateProject :one
-INSERT INTO projects (id, name, description) VALUES (?, ?, ?)
-  ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = CURRENT_TIMESTAMP
-  RETURNING *;
-
--- name: UpsertProjectByName :one
-INSERT INTO projects (id, name, description) VALUES (?, ?, ?)
-  ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+-- Upsert keyed by target_key (identity); name is a mutable display label.
+-- Re-scanning the same target maps to the same project row.
+-- name: UpsertProject :one
+INSERT INTO projects (id, name, target_key, description) VALUES (?, ?, ?, ?)
+  ON CONFLICT(target_key) DO UPDATE SET name = excluded.name, updated_at = CURRENT_TIMESTAMP
   RETURNING *;
 
 -- ============================================================================

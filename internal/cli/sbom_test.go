@@ -27,7 +27,7 @@ func newSBOMTestDB(t *testing.T, scanID string) *sqlc.Queries {
 	t.Cleanup(func() { db.Close() })
 	q := sqlc.New(db)
 
-	p, err := q.UpsertProjectByName(ctx, sqlc.UpsertProjectByNameParams{ID: "p1", Name: "demo"})
+	p, err := q.UpsertProject(ctx, sqlc.UpsertProjectParams{ID: "p1", Name: "demo", TargetKey: "demo"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -36,7 +36,7 @@ const MaxUploadBytes = 100 << 20
 func (s *Server) uploadAndScan(w http.ResponseWriter, r *http.Request) {
 	/* 限制上傳大小 超過 MaxUploadBytes 在讀 body 時即觸發 */
 	r.Body = http.MaxBytesReader(w, r.Body, MaxUploadBytes)
-	if err := r.ParseMultipartForm(MaxUploadBytes); err != nil {
+	if err := r.ParseMultipartForm(MaxUploadBytes); err != nil { // #nosec G120 -- body 已由上一行 MaxBytesReader 限制 MaxUploadBytes 不會無界解析
 		writeError(w, http.StatusBadRequest, "上傳失敗 檔案過大或格式錯誤 上限 100MB")
 		return
 	}
@@ -124,7 +124,7 @@ func (s *Server) uploadAndScan(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() { _ = os.RemoveAll(tempDir) }()
 		if _, err := run(); err != nil {
-			log.Printf("web 上傳掃描 %s 失敗: %v", header.Filename, err)
+			log.Printf("web 上傳掃描 %q 失敗: %v", header.Filename, err) // #nosec G706 -- %q 以 Go 語法引號跳脫換行/控制字元 已防日誌注入
 		}
 	}()
 

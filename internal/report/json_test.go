@@ -8,10 +8,9 @@ import (
 	"github.com/cluion/vigila/internal/store/sqlc"
 )
 
-/* strPtr / intPtr / floatPtr 為測試用指標輔助函式 避免重複 */
-func strPtr(s string) *string     { return &s }
-func intPtr(i int64) *int64       { return &i }
-func floatPtr(f float64) *float64 { return &f }
+/* strPtr / intPtr 為測試用指標輔助函式 避免重複 */
+func strPtr(s string) *string { return &s }
+func intPtr(i int64) *int64   { return &i }
 
 /* TestBuildReportDataSummary 驗證 severity 統計計數正確 */
 func TestBuildReportDataSummary(t *testing.T) {

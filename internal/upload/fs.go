@@ -22,11 +22,11 @@ func mkdirAll(path string) error {
 	writeFileLimited 把 r 內容寫入 path 並限制最多讀 maxBytes
 
 回傳實際寫入位元組數 供累計解壓總大小
-檔案權限 0o640 原始碼檔案不需執行權 不開放 world
+檔案權限 0o600 僅擁有者可讀寫 暫存檔由同一程序解壓後掃描即刪 不需 group/world 存取
 超過 maxBytes 回 ErrDecompressionLimit 讓呼叫端中止整個解壓
 */
 func writeFileLimited(path string, r io.Reader, maxBytes int64) (int64, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o640) // #nosec G304 -- path 由 safeJoin 驗證在 dest 內
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // #nosec G304 -- path 由 safeJoin 驗證在 dest 內
 	if err != nil {
 		return 0, fmt.Errorf("建立檔案 %s 失敗: %w", path, err)
 	}

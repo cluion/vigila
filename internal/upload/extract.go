@@ -121,7 +121,7 @@ func extractZip(data []byte, dest string) error {
 			return fmt.Errorf("開啟 zip 內檔案 %s 失敗: %w", f.Name, err)
 		}
 		n, err := writeFileLimited(full, rc, MaxUncompressed-total)
-		rc.Close()
+		_ = rc.Close()
 		if err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func extractTarGz(data []byte, dest string) error {
 			if err := mkdirAll(full); err != nil {
 				return err
 			}
-		case tar.TypeReg, tar.TypeRegA:
+		case tar.TypeReg:
 			if err := mkdirAll(filepath.Dir(full)); err != nil {
 				return err
 			}

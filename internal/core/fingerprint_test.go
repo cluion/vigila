@@ -7,8 +7,8 @@ import (
 )
 
 /*
-	TestDASTFingerprintDistinguishesMethod 同一 rule 與 URL 但不同 HTTP method
-	應產生不同 fingerprint 否則 GET 與 POST 的發現會被誤去重成一筆
+TestDASTFingerprintDistinguishesMethod 同一 rule 與 URL 但不同 HTTP method
+應產生不同 fingerprint 否則 GET 與 POST 的發現會被誤去重成一筆
 */
 func TestDASTFingerprintDistinguishesMethod(t *testing.T) {
 	base := model.Finding{
@@ -29,15 +29,19 @@ func TestDASTFingerprintDistinguishesMethod(t *testing.T) {
 
 /* TestFingerprintStableForSameInput 相同輸入應得穩定一致的 fingerprint */
 func TestFingerprintStableForSameInput(t *testing.T) {
-	var line int64 = 42
-	f := model.Finding{
-		Engine:    "semgrep",
-		Category:  model.CategorySAST,
-		RuleID:    "sql-injection",
-		FilePath:  "app/db.go",
-		StartLine: &line,
+	newFinding := func() model.Finding {
+		var line int64 = 42
+		return model.Finding{
+			Engine:    "semgrep",
+			Category:  model.CategorySAST,
+			RuleID:    "sql-injection",
+			FilePath:  "app/db.go",
+			StartLine: &line,
+		}
 	}
-	if Fingerprint(f) != Fingerprint(f) {
+	first := Fingerprint(newFinding())
+	second := Fingerprint(newFinding())
+	if first != second {
 		t.Error("相同輸入的 fingerprint 應一致")
 	}
 }

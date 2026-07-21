@@ -9,8 +9,8 @@ import (
 )
 
 /*
-	TestReapStaleRunningScans 逾時仍 running 的殘留掃描應被標為 failed
-	近期的 running 掃描不受影響 避免誤殺正在進行的掃描
+TestReapStaleRunningScans 逾時仍 running 的殘留掃描應被標為 failed
+近期的 running 掃描不受影響 避免誤殺正在進行的掃描
 */
 func TestReapStaleRunningScans(t *testing.T) {
 	ctx := context.Background()

@@ -104,9 +104,9 @@ func TestFindChecksums(t *testing.T) {
 			asset{"grype_checksums.txt.sig", "u-sig"},
 			asset{"grype_checksums.txt", "u-txt"},
 		)
-		got, err := findChecksums(rel)
-		if err != nil || got != "u-txt" {
-			t.Errorf("應取 checksums.txt 得 %q err %v", got, err)
+		name, url, err := findChecksums(rel)
+		if err != nil || url != "u-txt" || name != "grype_checksums.txt" {
+			t.Errorf("應取 checksums.txt 得 name=%q url=%q err %v", name, url, err)
 		}
 	})
 
@@ -115,15 +115,15 @@ func TestFindChecksums(t *testing.T) {
 			asset{"osv-scanner_linux_amd64", "u-bin"},
 			asset{"osv-scanner_SHA256SUMS", "u-sums"},
 		)
-		got, err := findChecksums(rel)
-		if err != nil || got != "u-sums" {
-			t.Errorf("應取 SHA256SUMS 得 %q err %v", got, err)
+		name, url, err := findChecksums(rel)
+		if err != nil || url != "u-sums" || name != "osv-scanner_SHA256SUMS" {
+			t.Errorf("應取 SHA256SUMS 得 name=%q url=%q err %v", name, url, err)
 		}
 	})
 
 	t.Run("無 checksums 檔回錯", func(t *testing.T) {
 		rel := releaseWithAssets(asset{"osv-scanner_linux_amd64", "u-bin"})
-		if _, err := findChecksums(rel); err == nil {
+		if _, _, err := findChecksums(rel); err == nil {
 			t.Error("無 checksums 應回錯")
 		}
 	})

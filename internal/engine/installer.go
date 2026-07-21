@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cluion/vigila/internal/scanner"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 /* Result 為一次安裝的結果 */
@@ -21,6 +22,10 @@ type Result struct {
 	Engine  string
 	Version string
 	Path    string
+	/* SignatureVerified 表示 checksums 檔已通過 cosign keyless 簽章驗證 */
+	SignatureVerified bool
+	/* Warning 為非致命提醒 例如上游未發佈簽章 僅比對 checksum */
+	Warning string
 }
 
 /*
@@ -34,15 +39,21 @@ type Installer struct {
 	GOOS    string
 	GOARCH  string
 	Get     func(url string) ([]byte, int, error)
+
+	/* TrustedRoot 提供 cosign 簽章驗證的 Sigstore 信任根 nil 時用預設 TUF 取得 供測試覆寫 */
+	TrustedRoot trustedRootLoader
+	/* SkipSignature 為 true 時略過簽章驗證 僅供測試 生產環境勿設 */
+	SkipSignature bool
 }
 
 /* NewInstaller 建立寫入 managed 目錄的安裝器 */
 func NewInstaller() *Installer {
 	return &Installer{
-		DestDir: scanner.ManagedDir(),
-		GOOS:    runtime.GOOS,
-		GOARCH:  runtime.GOARCH,
-		Get:     httpGet,
+		DestDir:     scanner.ManagedDir(),
+		GOOS:        runtime.GOOS,
+		GOARCH:      runtime.GOARCH,
+		Get:         httpGet,
+		TrustedRoot: fetchTrustedRoot,
 	}
 }
 
@@ -78,7 +89,7 @@ func (in *Installer) Install(name string) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("找不到 %s 的下載檔 %s（可能該平台未提供）", name, assetName)
 	}
-	checksumsURL, err := findChecksums(rel)
+	checksumsName, checksumsURL, err := findChecksums(rel)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +103,13 @@ func (in *Installer) Install(name string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	/* 供應鏈 先驗 checksums 的 cosign 簽章（真實性）再比對 archive 的 sha256（完整性） */
+	warning, verified, err := in.verifySignature(name, rel, checksumsName, checksums)
+	if err != nil {
+		return nil, err
+	}
+
 	wantSha, err := parseChecksum(checksums, assetName)
 	if err != nil {
 		return nil, err
@@ -110,7 +128,55 @@ func (in *Installer) Install(name string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Engine: name, Version: version, Path: path}, nil
+	return &Result{Engine: name, Version: version, Path: path, SignatureVerified: verified, Warning: warning}, nil
+}
+
+/*
+verifySignature 驗證 checksums 檔的 cosign keyless 簽章
+
+上游有簽章的引擎 下載簽章附檔並驗證 失敗即中止安裝（回 error）
+上游無簽章的引擎 回警告字串（非 error）維持 checksum-only
+回傳 (warning, verified, error)
+*/
+func (in *Installer) verifySignature(name string, rel *ghRelease, checksumsName string, checksums []byte) (string, bool, error) {
+	if !HasSignature(name) {
+		return fmt.Sprintf("%s 上游未發佈簽章 僅以 checksum 驗證完整性 無法驗證來源真實性", name), false, nil
+	}
+	if in.SkipSignature {
+		return "", false, nil
+	}
+
+	tr, err := in.trustedRoot()
+	if err != nil {
+		return "", false, fmt.Errorf("取得 Sigstore 信任根失敗: %w", err)
+	}
+
+	/* 簽章附檔命名為 <checksums 檔名> 加固定後綴 依實際存在者下載 */
+	assets := map[string][]byte{}
+	for _, suffix := range []string{".sig", ".pem", ".sigstore.json"} {
+		url, e := findAsset(rel, checksumsName+suffix)
+		if e != nil {
+			continue
+		}
+		data, e := in.download(url)
+		if e != nil {
+			return "", false, fmt.Errorf("下載簽章附檔 %s 失敗: %w", checksumsName+suffix, e)
+		}
+		assets[suffix] = data
+	}
+
+	if err := verifyChecksumSignature(tr, name, checksums, assets); err != nil {
+		return "", false, fmt.Errorf("%s 簽章驗證失敗 已中止安裝: %w", name, err)
+	}
+	return "", true, nil
+}
+
+/* trustedRoot 取得簽章驗證信任根 未注入時用預設 TUF 取得器 */
+func (in *Installer) trustedRoot() (*root.TrustedRoot, error) {
+	if in.TrustedRoot != nil {
+		return in.TrustedRoot()
+	}
+	return fetchTrustedRoot()
 }
 
 /* latestRelease 取 GitHub latest release */
@@ -177,7 +243,7 @@ func findAsset(rel *ghRelease, name string) (string, error) {
 
 相容 goreleaser 的 checksums.txt 與 osv-scanner 等的 SHA256SUMS 無副檔名
 */
-func findChecksums(rel *ghRelease) (string, error) {
+func findChecksums(rel *ghRelease) (string, string, error) {
 	for _, a := range rel.Assets {
 		n := strings.ToLower(a.Name)
 		if strings.HasSuffix(n, ".sig") || strings.HasSuffix(n, ".pem") || strings.HasSuffix(n, ".asc") {
@@ -186,10 +252,10 @@ func findChecksums(rel *ghRelease) (string, error) {
 		isChecksum := (strings.Contains(n, "checksums") && strings.HasSuffix(n, ".txt")) ||
 			strings.Contains(n, "sha256sums")
 		if isChecksum {
-			return a.URL, nil
+			return a.Name, a.URL, nil
 		}
 	}
-	return "", fmt.Errorf("release 中找不到 checksums 檔")
+	return "", "", fmt.Errorf("release 中找不到 checksums 檔")
 }
 
 func sha256Hex(data []byte) string {

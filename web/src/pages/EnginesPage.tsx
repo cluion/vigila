@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Engine } from "@/lib/api";
 import { EngineBadge } from "@/components/badges";
-import { Check, Copy, Download, ExternalLink } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, ShieldCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -87,12 +87,15 @@ function InstallButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sig, setSig] = useState<{ verified: boolean; warning: string } | null>(null);
 
   const install = async () => {
     setBusy(true);
     setErr("");
+    setSig(null);
     try {
-      await api.installEngine(engine.name);
+      const res = await api.installEngine(engine.name);
+      setSig({ verified: res.signature_verified, warning: res.warning });
       onChanged();
     } catch (e) {
       setErr((e as Error).message);
@@ -115,6 +118,20 @@ function InstallButton({
       {err && (
         <span className="text-xs text-critical" title={err}>
           失敗
+        </span>
+      )}
+      {sig?.verified && (
+        <span
+          className="inline-flex items-center gap-0.5 text-xs text-success"
+          title="checksums 已通過 cosign keyless 簽章驗證 來源真實性已確認"
+        >
+          <ShieldCheck className="size-3.5" />
+          已驗簽
+        </span>
+      )}
+      {sig && !sig.verified && sig.warning && (
+        <span className="text-xs text-medium" title={sig.warning}>
+          無簽章
         </span>
       )}
     </div>

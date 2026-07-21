@@ -30,6 +30,7 @@ make build
    - OWASP ZAP `brew install --cask zap` 或 docker pull ghcr.io/zaproxy/zaproxy:stable
 2. **managed 下載** `vigila engine install <name>` 下載官方 binary 到 `~/.vigila/engines/` 免污染系統 PATH
    - 支援 gitleaks grype trivy trufflehog nuclei osv-scanner
+   - **供應鏈驗證**：除比對官方 checksums 的 sha256（完整性）外，對有發佈 cosign keyless 簽章的引擎（trivy、grype、syft、trufflehog）額外驗證 checksums 檔的簽章與簽署者身分（Sigstore 信任根經 TUF 取得），確認來源真實性；驗證失敗即中止安裝。未發佈簽章者（gitleaks、nuclei、osv-scanner）維持 checksum-only 並提示
 3. **docker 容器** 以官方容器執行 免在主機裝任何東西 明確勾選後蓋過偶然在 PATH 的系統版
    - 在網頁引擎面板點 Docker 開關即可勾選 或手動 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
    - 掃描時 vigila 自動以 `docker compose run` 執行 路徑型引擎同路徑掛載目標 nuclei 傳 URL 不掛載 gitleaks/ZAP 掛輸出目錄讀報告 見 `docker-compose.yml`

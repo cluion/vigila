@@ -128,8 +128,10 @@ func (s *Server) installEngine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"engine":  res.Engine,
-		"version": res.Version,
-		"path":    res.Path,
+		"engine":             res.Engine,
+		"version":            res.Version,
+		"path":               res.Path,
+		"signature_verified": res.SignatureVerified,
+		"warning":            res.Warning,
 	})
 }

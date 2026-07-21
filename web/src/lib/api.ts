@@ -287,7 +287,13 @@ export const api = {
   },
   installEngine: async (
     name: string,
-  ): Promise<{ engine: string; version: string; path: string }> => {
+  ): Promise<{
+    engine: string;
+    version: string;
+    path: string;
+    signature_verified: boolean;
+    warning: string;
+  }> => {
     const res = await apiFetch(`/engines/${name}/install`, {
       method: "POST",
     });

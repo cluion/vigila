@@ -49,6 +49,12 @@ semgrep 與 nmap 請改用官方安裝方式 見 engine list 的安裝指引`,
 				return err
 			}
 			fmt.Fprintf(out, "已安裝 %s %s\n  路徑: %s\n", res.Engine, res.Version, res.Path)
+			if res.SignatureVerified {
+				fmt.Fprintf(out, "  簽章: ✓ 已通過 cosign keyless 驗證\n")
+			}
+			if res.Warning != "" {
+				fmt.Fprintf(out, "  ⚠ %s\n", res.Warning)
+			}
 			return nil
 		},
 	}

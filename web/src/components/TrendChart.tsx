@@ -58,13 +58,18 @@ export function TrendChart() {
         <h2 className="text-sm font-semibold">歷史趨勢 新增 vs 修復</h2>
         {projects.length > 0 && (
           <Select value={projectId} onValueChange={setProjectId}>
-            <SelectTrigger className="h-8 w-[220px] text-[13px]">
+            <SelectTrigger className="h-auto min-h-8 w-[260px] py-1 text-[13px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {projects.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+                  <span className="flex flex-col">
+                    <span>{p.name}</span>
+                    <span className="max-w-[260px] truncate text-[11px] text-muted-foreground">
+                      {p.target_key}
+                    </span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>

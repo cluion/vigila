@@ -141,7 +141,7 @@ export interface ScanDiff {
 export interface Project {
   id: string;
   name: string;
-  target: string | null;
+  target_key: string;
   description: string | null;
   created_at: string;
   updated_at: string;

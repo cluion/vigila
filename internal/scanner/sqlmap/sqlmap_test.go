@@ -58,6 +58,48 @@ func TestParse(t *testing.T) {
 	}
 }
 
+/*
+	TestParseRealOutput 以真實 sqlmap 掃描輸出驗證解析（regression fixture）
+
+fixture 取自 sqlmap 對本機故意含 SQL 注入的 app（?id= 字串串接）的實際 stdout
+含完整 banner 與雜訊行 確保 parser 只挑出 Parameter/Type 區塊 不被雜訊干擾
+*/
+func TestParseRealOutput(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "real_scan.txt"))
+	if err != nil {
+		t.Fatalf("讀取真實 fixture 失敗: %v", err)
+	}
+
+	s := &Scanner{}
+	findings, err := s.Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse 真實輸出失敗: %v", err)
+	}
+
+	if len(findings) != 1 {
+		t.Fatalf("真實輸出期望 1 筆 finding 實際 %d", len(findings))
+	}
+	f := findings[0]
+	if f.Severity != model.SeverityHigh {
+		t.Errorf("SQL 注入應為 HIGH 實際 %s", f.Severity)
+	}
+	if !strings.Contains(f.Title, "id") || f.Method != "GET" {
+		t.Errorf("應為 id 參數 GET 方法 得 title=%q method=%q", f.Title, f.Method)
+	}
+	if f.URL != "http://smoke-vuln:8080/?id=1" {
+		t.Errorf("URL 應由標記還原 實際 %s", f.URL)
+	}
+	/* 真實輸出偵測到 boolean-based blind 與 UNION query 兩種手法 */
+	for _, want := range []string{"boolean-based blind", "UNION query"} {
+		if !strings.Contains(f.Description, want) {
+			t.Errorf("Description 應含 %q 實際 %s", want, f.Description)
+		}
+	}
+	if f.HashCode == "" {
+		t.Error("HashCode 不應為空")
+	}
+}
+
 /* TestParseMultiParam 確認多參數各成一筆 finding */
 func TestParseMultiParam(t *testing.T) {
 	raw := []byte(`vigila-target: http://x/p?a=1&b=2

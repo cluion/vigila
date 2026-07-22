@@ -57,6 +57,43 @@ func TestParse(t *testing.T) {
 	}
 }
 
+/*
+	TestParseRealOutput 以真實 nikto 掃描輸出驗證解析（regression fixture）
+
+fixture 取自 nikto 2.5.0 對 nginx:alpine 的實際 JSON 報告 6 筆伺服器 header 發現
+確保手寫 fixture 與真實工具輸出格式一致 防欄位漂移
+*/
+func TestParseRealOutput(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "real_nginx.json"))
+	if err != nil {
+		t.Fatalf("讀取真實 fixture 失敗: %v", err)
+	}
+
+	s := &Scanner{}
+	findings, err := s.Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse 真實輸出失敗: %v", err)
+	}
+
+	if len(findings) != 6 {
+		t.Fatalf("真實輸出期望 6 筆 finding 實際 %d", len(findings))
+	}
+	for i, f := range findings {
+		if f.Engine != "nikto" || f.Severity != model.SeverityLow {
+			t.Errorf("第 %d 筆 engine/severity 不符 得 %s/%s", i, f.Engine, f.Severity)
+		}
+		if f.Host != "smoke-nginx" || f.Port != "80" {
+			t.Errorf("第 %d 筆 host/port 不符 得 %s:%s", i, f.Host, f.Port)
+		}
+		if f.RuleID == "" || f.Title == "" || f.HashCode == "" {
+			t.Errorf("第 %d 筆 必要欄位為空 %+v", i, f)
+		}
+		if len(f.References) != 1 {
+			t.Errorf("第 %d 筆 應有 1 個 reference 實際 %d", i, len(f.References))
+		}
+	}
+}
+
 /* TestParseSingleObject 確認相容單一物件頂層形狀 */
 func TestParseSingleObject(t *testing.T) {
 	raw := []byte(`{"host":"x","port":"443","vulnerabilities":[{"id":"1","method":"GET","url":"/a","msg":"m"}]}`)

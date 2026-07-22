@@ -28,6 +28,9 @@ var dockerCapable = map[string]bool{
 	"nuclei":      true,
 	"gitleaks":    true,
 	"nmap":        true,
+	"nikto":       true,
+	"sqlmap":      true,
+	"openvas":     true,
 }
 
 /*

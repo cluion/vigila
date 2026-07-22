@@ -1,0 +1,54 @@
+<get_reports_response status="200" status_text="OK">
+  <report id="r-outer">
+    <report id="r-inner">
+      <results start="1" max="1000">
+        <result id="res-1">
+          <name>SSL/TLS: Deprecated TLSv1.0 and TLSv1.1 Protocol Detection</name>
+          <host>192.168.56.101<asset asset_id="a-1"/></host>
+          <port>443/tcp</port>
+          <nvt oid="1.3.6.1.4.1.25623.1.0.117274">
+            <name>SSL/TLS: Deprecated TLSv1.0 and TLSv1.1 Protocol Detection</name>
+            <family>SSL and TLS</family>
+            <cvss_base>4.3</cvss_base>
+            <refs>
+              <ref type="cve" id="CVE-2011-3389"/>
+              <ref type="url" id="https://example.com/tls"/>
+            </refs>
+          </nvt>
+          <threat>Medium</threat>
+          <severity>4.3</severity>
+          <description>The remote service accepts connections encrypted using deprecated TLS versions.</description>
+        </result>
+        <result id="res-2">
+          <name>OpenSSH Multiple Vulnerabilities</name>
+          <host>192.168.56.101<asset asset_id="a-1"/></host>
+          <port>22/tcp</port>
+          <nvt oid="1.3.6.1.4.1.25623.1.0.100259">
+            <name>OpenSSH Multiple Vulnerabilities</name>
+            <family>General</family>
+            <cvss_base>9.8</cvss_base>
+            <refs>
+              <ref type="cve" id="CVE-2023-38408"/>
+            </refs>
+          </nvt>
+          <threat>High</threat>
+          <severity>9.8</severity>
+          <description>The remote host is running an outdated OpenSSH with multiple issues.</description>
+        </result>
+        <result id="res-3">
+          <name>Traceroute</name>
+          <host>192.168.56.101<asset asset_id="a-1"/></host>
+          <port>general/tcp</port>
+          <nvt oid="1.3.6.1.4.1.25623.1.0.51662">
+            <name>Traceroute</name>
+            <family>General</family>
+            <cvss_base>0.0</cvss_base>
+          </nvt>
+          <threat>Log</threat>
+          <severity>0.0</severity>
+          <description>Informational traceroute result.</description>
+        </result>
+      </results>
+    </report>
+  </report>
+</get_reports_response>

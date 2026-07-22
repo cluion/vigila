@@ -66,6 +66,32 @@ services:
     profiles: [nmap]
     network_mode: host
 
+  # nikto 為 URL 目標 報告只能寫檔 vigila 掃描時動態掛載暫存輸出目錄至 /output 並讀回
+  nikto:
+    image: ghcr.io/sullo/nikto:latest
+    profiles: [nikto]
+
+  # sqlmap 為 URL 目標 直接傳入 -u 不需掛載 vigila 解析其 stdout 的注入點區塊
+  # 影像由 Parrot Security 維護 非上游官方發佈 供便利執行 系統安裝見 InstallHint
+  sqlmap:
+    image: parrotsec/sqlmap:latest
+    profiles: [sqlmap]
+
+  # openvas 為 host 目標 immauss/openvas 單容器內含 GVM 全套服務與 GMP socket
+  # 與其他引擎不同 為常駐服務 需先 docker compose --profile openvas up -d 起服務
+  # 首次啟動會同步弱點 feed 需時較久 vigila 以 docker compose exec 呼叫容器內 gvm-cli 走 GMP
+  # 需 host 網路才能掃到內網主機 僅 Linux Docker 與 OrbStack 真正生效
+  openvas:
+    image: immauss/openvas:latest
+    profiles: [openvas]
+    network_mode: host
+    environment:
+      - USERNAME=admin
+      - PASSWORD=admin
+    volumes:
+      - openvas-data:/data
+
 volumes:
   trivy-cache:
   grype-db:
+  openvas-data:

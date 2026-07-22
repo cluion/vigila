@@ -1,0 +1,30 @@
+[
+  {
+    "host": "testphp.vulnweb.com",
+    "ip": "44.228.249.3",
+    "port": "80",
+    "banner": "nginx/1.19.0",
+    "vulnerabilities": [
+      {
+        "id": "999957",
+        "method": "GET",
+        "url": "/",
+        "msg": "The anti-clickjacking X-Frame-Options header is not present.",
+        "references": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options"
+      },
+      {
+        "id": "999103",
+        "method": "GET",
+        "OSVDB": "3092",
+        "url": "/admin/",
+        "msg": "This might be interesting: admin directory found."
+      },
+      {
+        "id": "",
+        "method": "GET",
+        "url": "/noise",
+        "msg": "no id noise row should be skipped"
+      }
+    ]
+  }
+]

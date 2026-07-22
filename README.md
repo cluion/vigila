@@ -28,14 +28,18 @@ make build
    - Nmap 見 https://nmap.org
    - OSV-Scanner 見 https://google.github.io/osv-scanner
    - OWASP ZAP `brew install --cask zap` 或 docker pull ghcr.io/zaproxy/zaproxy:stable
+   - Nikto `brew install nikto` 或見 https://github.com/sullo/nikto
+   - SQLMap `brew install sqlmap` 或見 https://github.com/sqlmapproject/sqlmap
+   - OpenVAS/GVM 僅支援 docker 執行（immauss/openvas 單容器全套）於引擎面板開啟 Docker 開關
 2. **managed 下載** `vigila engine install <name>` 下載官方 binary 到 `~/.vigila/engines/` 免污染系統 PATH
    - 支援 gitleaks grype trivy trufflehog nuclei osv-scanner
    - **供應鏈驗證**：除比對官方 checksums 的 sha256（完整性）外，對有發佈 cosign keyless 簽章的引擎（trivy、grype、syft、trufflehog）額外驗證 checksums 檔的簽章與簽署者身分（Sigstore 信任根經 TUF 取得），確認來源真實性；驗證失敗即中止安裝。未發佈簽章者（gitleaks、nuclei、osv-scanner）維持 checksum-only 並提示
    - **版本釘選**：`vigila engine install <name>@<version>` 安裝特定版本並記錄於 `~/.vigila/engines/engines.lock.json`，之後不帶版本重裝會沿用釘選（可重現、釘住已驗證版本）；`<name>@latest` 抓最新版並解除釘選。面板版本欄會顯示釘選標記
 3. **docker 容器** 以官方容器執行 免在主機裝任何東西 明確勾選後蓋過偶然在 PATH 的系統版
    - 在網頁引擎面板點 Docker 開關即可勾選 或手動 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
-   - 掃描時 vigila 自動以 `docker compose run` 執行 路徑型引擎同路徑掛載目標 nuclei 傳 URL 不掛載 gitleaks/ZAP 掛輸出目錄讀報告 見 `docker-compose.yml`
-   - 目前支援 semgrep trivy grype trufflehog osv-scanner checkov zap nuclei gitleaks nmap（全部 10 引擎）
+   - 掃描時 vigila 自動以 `docker compose run` 執行 路徑型引擎同路徑掛載目標 nuclei/sqlmap 傳 URL 不掛載 gitleaks/ZAP/nikto 掛輸出目錄讀報告 見 `docker-compose.yml`
+   - 目前支援 semgrep trivy grype trufflehog osv-scanner checkov zap nuclei gitleaks nmap nikto sqlmap（12 引擎以 `docker compose run` 一次性執行）
+   - **openvas** 特殊：為常駐服務 需先 `docker compose --profile openvas up -d` 起服務（首次會同步弱點 feed 較久）vigila 再以 `docker compose exec` 呼叫容器內 gvm-cli 走 GMP 協定建 target/task 輪詢完成後取報告
 
 檢視每個引擎目前的版本與來源 `vigila engine list`
 
@@ -99,7 +103,10 @@ vigila engine list
 | IaC 設定掃描 | Checkov | Terraform K8s Dockerfile 等錯誤設定 |
 | DAST 動態掃描 | Nuclei | 網頁漏洞 target 為 URL |
 | DAST 深度掃描 | OWASP ZAP | 主被動網頁掃描 header CSP XSS 等 target 為 URL |
+| DAST 伺服器掃描 | Nikto | 網頁伺服器已知漏洞與設定缺陷 target 為 URL |
+| DAST 注入偵測 | SQLMap | SQL 注入探測 帶參數 URL target 為 URL |
 | VA 弱點評估 | Nmap | 網路服務偵測 target 為 host 或 IP |
+| VA 弱點掃描 | OpenVAS/GVM | 完整弱點掃描 走 GMP 僅 docker target 為 host 或 IP |
 
 六類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 IaC 找基礎設施設定的錯 DAST 對運行中的網頁發請求 VA 盤點開放的服務
 
@@ -116,8 +123,8 @@ vigila engine list
 | 目標型態 | 範例 | 適用引擎 |
 |---------|------|---------|
 | 路徑 | `./myapp` `/tmp/repo` | semgrep trivy grype gitleaks trufflehog |
-| URL | `https://example.com` | nuclei |
-| 主機 | `scanme.nmap.org` `10.0.0.1:443` | nmap |
+| URL | `https://example.com` | nuclei zap nikto sqlmap |
+| 主機 | `scanme.nmap.org` `10.0.0.1:443` | nmap openvas |
 
 型態由目標字串推導 含 scheme 視為 URL 本機存在的路徑視為路徑 可解析為 IP 或網域名視為主機
 

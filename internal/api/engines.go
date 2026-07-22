@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"sync"
@@ -30,6 +31,7 @@ type engineInfo struct {
 	DockerCapable bool        `json:"docker_capable"` // 是否可經 docker 執行 供面板顯示開關
 	DockerEnabled bool        `json:"docker_enabled"` // 是否已勾選 docker profile
 	Installable   bool        `json:"installable"`    // 是否可經面板一鍵安裝（managed binary 下載）
+	PinnedVersion string      `json:"pinned_version"` // 釘選版本 未釘選為空字串
 	InstallHint   installHint `json:"install_hint"`
 }
 
@@ -41,6 +43,7 @@ type engineInfo struct {
 */
 func engineInfos(engines []scanner.Scanner) []engineInfo {
 	infos := make([]engineInfo, len(engines))
+	pins := engine.PinnedVersions()
 	var wg sync.WaitGroup
 	for i, e := range engines {
 		wg.Add(1)
@@ -63,6 +66,7 @@ func engineInfos(engines []scanner.Scanner) []engineInfo {
 				DockerCapable: scanner.DockerCapable(e.Name()),
 				DockerEnabled: scanner.DockerProfileEnabled(e.Name()),
 				Installable:   engine.IsInstallable(e.Name()),
+				PinnedVersion: pins[e.Name()],
 				InstallHint:   installHint{DocsURL: hint.DocsURL, Command: hint.Command},
 			}
 		}(i, e)
@@ -111,6 +115,7 @@ func (s *Server) setEngineDocker(w http.ResponseWriter, r *http.Request) {
 
 僅 installable 引擎可操作（gitleaks grype trivy trufflehog nuclei osv-scanner）
 其餘回 400 引導使用者依安裝指引手動處理
+body 可選 {"version": "8.30.1"} 釘選特定版本 "latest" 解除釘選 省略時沿用釘選或抓最新
 同步執行 installer 下載 checksum 驗證 解壓 寫入 managed 目錄 完成後回版本與路徑
 */
 func (s *Server) installEngine(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +126,21 @@ func (s *Server) installEngine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := engine.NewInstaller().Install(name)
+	/* body 可省略（面板一鍵安裝不帶 body）有內容但非合法 JSON 才回 400 */
+	var body struct {
+		Version string `json:"version"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err != io.EOF {
+		writeError(w, http.StatusBadRequest, "無效的請求內容")
+		return
+	}
+
+	arg := name
+	if body.Version != "" {
+		arg = name + "@" + body.Version
+	}
+
+	res, err := engine.NewInstaller().Install(arg)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -133,5 +152,6 @@ func (s *Server) installEngine(w http.ResponseWriter, r *http.Request) {
 		"path":               res.Path,
 		"signature_verified": res.SignatureVerified,
 		"warning":            res.Warning,
+		"pinned":             res.Pinned,
 	})
 }

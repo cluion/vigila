@@ -169,6 +169,7 @@ export interface Engine {
   docker_capable: boolean; // 是否可經 docker 執行
   docker_enabled: boolean; // 是否已勾選 docker profile
   installable: boolean; // 是否可經面板一鍵安裝（managed binary 下載）
+  pinned_version: string; // 釘選版本 未釘選為空字串
   install_hint: {
     docs_url: string;
     command: string;
@@ -287,15 +288,24 @@ export const api = {
   },
   installEngine: async (
     name: string,
+    version?: string,
   ): Promise<{
     engine: string;
     version: string;
     path: string;
     signature_verified: boolean;
     warning: string;
+    pinned: boolean;
   }> => {
+    /* version 釘選特定版本 "latest" 解除釘選 省略時沿用釘選或抓最新 */
     const res = await apiFetch(`/engines/${name}/install`, {
       method: "POST",
+      ...(version
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ version }),
+          }
+        : {}),
     });
     if (!res.ok) {
       throw new Error(`API ${res.status}: ${await res.text()}`);

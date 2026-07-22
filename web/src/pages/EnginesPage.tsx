@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Engine } from "@/lib/api";
 import { EngineBadge } from "@/components/badges";
-import { Check, Copy, Download, ExternalLink, ShieldCheck } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Pin, ShieldCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -239,6 +239,15 @@ export function EnginesPage() {
                   </TableCell>
                   <TableCell className="font-mono text-[13px] tabular-nums">
                     {e.version || <span className="text-muted-foreground">—</span>}
+                    {e.pinned_version && (
+                      <span
+                        className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-indigo/10 px-1 py-0.5 font-sans text-xs text-indigo"
+                        title={`已釘選 ${e.pinned_version} 重新安裝將沿用此版本 CLI 以 engine install ${e.name}@latest 解除`}
+                      >
+                        <Pin className="size-3" />
+                        {e.pinned_version}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1.5">

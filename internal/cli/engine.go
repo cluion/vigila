@@ -31,12 +31,15 @@ func NewEngineCmd() *cobra.Command {
 /* newEngineInstallCmd 建立 engine install 子命令 下載官方 binary 到 managed 目錄 */
 func newEngineInstallCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "install <engine>",
+		Use:   "install <engine>[@<version>]",
 		Short: "下載引擎官方 binary 到 managed 目錄",
-		Long: `從官方 GitHub release 下載引擎最新版 binary 經 checksum 驗證後
+		Long: `從官方 GitHub release 下載引擎 binary 經 checksum 驗證後
 存入 ~/.vigila/engines/ 免污染系統 PATH
 
-支援 gitleaks grype trivy trufflehog nuclei
+加 @<version> 釘選特定版本（如 gitleaks@8.30.1）並記錄於 engines.lock.json
+之後不帶版本安裝會沿用釘選 加 @latest 抓最新版並解除釘選
+
+支援 gitleaks grype trivy trufflehog nuclei osv-scanner
 semgrep 與 nmap 請改用官方安裝方式 見 engine list 的安裝指引`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -49,6 +52,9 @@ semgrep 與 nmap 請改用官方安裝方式 見 engine list 的安裝指引`,
 				return err
 			}
 			fmt.Fprintf(out, "已安裝 %s %s\n  路徑: %s\n", res.Engine, res.Version, res.Path)
+			if res.Pinned {
+				fmt.Fprintf(out, "  版本: 已釘選 %s（install %s@latest 可解除）\n", res.Version, res.Engine)
+			}
 			if res.SignatureVerified {
 				fmt.Fprintf(out, "  簽章: ✓ 已通過 cosign keyless 驗證\n")
 			}

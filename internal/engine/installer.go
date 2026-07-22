@@ -26,6 +26,8 @@ type Result struct {
 	SignatureVerified bool
 	/* Warning 為非致命提醒 例如上游未發佈簽章 僅比對 checksum */
 	Warning string
+	/* Pinned 表示本次安裝為釘選版本 後續 install 不帶版本會沿用 */
+	Pinned bool
 }
 
 /*
@@ -67,18 +69,23 @@ type ghRelease struct {
 }
 
 /*
-	Install 自動安裝指定引擎
+	Install 自動安裝指定引擎 引數為 <name>[@<version>]
 
-流程 抓 latest release → 依平台組 asset 名 → 下載 checksums 比對 sha256
-→ 解壓取出 binary → 寫入 managed 目錄並賦予執行權限
+流程 解析版本（釘選／沿用釘選／latest）→ 抓 release → 依平台組 asset 名
+→ 下載 checksums 比對 sha256 → 解壓取出 binary → 寫入 managed 目錄並賦予執行權限
+→ 更新 engines.lock.json 記錄版本與釘選狀態
 */
-func (in *Installer) Install(name string) (*Result, error) {
+func (in *Installer) Install(arg string) (*Result, error) {
+	name, reqVersion, err := parseInstallArg(arg)
+	if err != nil {
+		return nil, err
+	}
 	spec, err := specFor(name)
 	if err != nil {
 		return nil, err
 	}
 
-	rel, err := in.latestRelease(spec.Repo)
+	rel, pinned, err := in.resolveRelease(name, spec.Repo, reqVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +135,46 @@ func (in *Installer) Install(name string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Engine: name, Version: version, Path: path, SignatureVerified: verified, Warning: warning}, nil
+
+	/* binary 已安裝成功 記錄失敗降為警告 不誤報安裝失敗 */
+	entry := lockEntry{Version: version, Pinned: pinned, SHA256: gotSha, SignatureVerified: verified}
+	if err := writeLockEntry(in.DestDir, name, entry); err != nil {
+		warning = joinWarning(warning, fmt.Sprintf("版本記錄寫入失敗 釘選狀態未保存: %v", err))
+	}
+	return &Result{Engine: name, Version: version, Path: path, SignatureVerified: verified, Warning: warning, Pinned: pinned}, nil
+}
+
+/*
+	resolveRelease 依請求版本決定抓哪個 release 回傳 (release, 是否釘選, error)
+
+明確版本 → tag 端點並釘選；latest → latest 端點並解除釘選
+未指定 → 先查 lock 有釘選則沿用 否則抓 latest
+*/
+func (in *Installer) resolveRelease(name, repo, reqVersion string) (*ghRelease, bool, error) {
+	version := reqVersion
+	switch reqVersion {
+	case "latest":
+		version = ""
+	case "":
+		if entry, ok := readLock(in.DestDir)[name]; ok && entry.Pinned {
+			version = entry.Version
+		}
+	}
+
+	if version == "" {
+		rel, err := in.latestRelease(repo)
+		return rel, false, err
+	}
+	rel, err := in.releaseByTag(repo, version)
+	return rel, true, err
+}
+
+/* joinWarning 串接警告字串 空字串直接取代 */
+func joinWarning(existing, added string) string {
+	if existing == "" {
+		return added
+	}
+	return existing + "；" + added
 }
 
 /*
@@ -188,6 +234,26 @@ func (in *Installer) latestRelease(repo string) (*ghRelease, error) {
 	}
 	if code != http.StatusOK {
 		return nil, fmt.Errorf("查詢 %s 最新版本 HTTP %d", repo, code)
+	}
+	var rel ghRelease
+	if err := json.Unmarshal(body, &rel); err != nil {
+		return nil, fmt.Errorf("解析 release 失敗: %w", err)
+	}
+	return &rel, nil
+}
+
+/* releaseByTag 取 GitHub 指定 tag 的 release 支援的引擎 tag 皆為 v 前綴 */
+func (in *Installer) releaseByTag(repo, version string) (*ghRelease, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/v%s", repo, version)
+	body, code, err := in.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("查詢 %s 版本 v%s 失敗: %w", repo, version, err)
+	}
+	if code == http.StatusNotFound {
+		return nil, fmt.Errorf("找不到 %s 版本 v%s 請確認版本號存在於官方 release", repo, version)
+	}
+	if code != http.StatusOK {
+		return nil, fmt.Errorf("查詢 %s 版本 v%s HTTP %d", repo, version, code)
 	}
 	var rel ghRelease
 	if err := json.Unmarshal(body, &rel); err != nil {

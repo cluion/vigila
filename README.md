@@ -183,6 +183,10 @@ make vet      # 靜態檢查
 make sqlc     # 重新產生 DB 存取碼
 ```
 
+## 變更紀錄
+
+各版本變更見 [CHANGELOG.md](./CHANGELOG.md)。
+
 ## 授權
 
 [MIT](./LICENSE)

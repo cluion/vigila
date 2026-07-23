@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-07-23
+
 ### Added
 - `web-deep` 內建 profile：一次跑全 DAST 引擎（nuclei + nikto + sqlmap + zap）做網頁深度掃描，不 FailFast
 
@@ -122,7 +124,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/cluion/vigila/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/cluion/vigila/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/cluion/vigila/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/cluion/vigila/compare/v0.19.1...v0.20.0

@@ -33,3 +33,25 @@ func TestNormalizeSeverity(t *testing.T) {
 		}
 	}
 }
+
+func TestSeverityFromCVSS(t *testing.T) {
+	cases := []struct {
+		score float64
+		want  model.Severity
+	}{
+		{9.8, model.SeverityCritical},
+		{9.0, model.SeverityCritical},
+		{7.5, model.SeverityHigh},
+		{7.0, model.SeverityHigh},
+		{4.3, model.SeverityMedium},
+		{4.0, model.SeverityMedium},
+		{0.1, model.SeverityLow},
+		{0.0, model.SeverityUnknown},
+		{-1, model.SeverityUnknown},
+	}
+	for _, c := range cases {
+		if got := SeverityFromCVSS(c.score); got != c.want {
+			t.Errorf("SeverityFromCVSS(%.1f) = %v 預期 %v", c.score, got, c.want)
+		}
+	}
+}

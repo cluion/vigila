@@ -76,3 +76,36 @@ func TestFindingsDedupIndex(t *testing.T) {
 		t.Fatalf("去重索引 idx_findings_dedup 不存在: %v", err)
 	}
 }
+
+/* TestOpenUnsupportedDriver 非 sqlite driver 應回錯 */
+func TestOpenUnsupportedDriver(t *testing.T) {
+	if _, err := Open(context.Background(), Config{Driver: "postgres"}); err == nil {
+		t.Error("postgres driver 應回不支援錯誤")
+	}
+}
+
+/* TestOpenDefaultPath DSN 為空時走 defaultSQLitePath 以 XDG_DATA_HOME 導向暫存目錄 */
+func TestOpenDefaultPath(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	db, err := Open(context.Background(), Config{}) // Driver 空 → 預設 sqlite DSN 空 → 預設路徑
+	if err != nil {
+		t.Fatalf("預設路徑開啟失敗: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if err := db.Ping(); err != nil {
+		t.Errorf("預設路徑資料庫應可 ping: %v", err)
+	}
+}
+
+/* TestDefaultSQLitePath 直接驗證預設路徑組法與目錄建立 */
+func TestDefaultSQLitePath(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", base)
+	p, err := defaultSQLitePath()
+	if err != nil {
+		t.Fatalf("defaultSQLitePath 失敗: %v", err)
+	}
+	if filepath.Dir(p) != filepath.Join(base, "vigila") {
+		t.Errorf("路徑應在 %s/vigila 下 實際 %s", base, p)
+	}
+}

@@ -90,3 +90,24 @@ func TestReadLockMissingOrCorrupt(t *testing.T) {
 		}
 	})
 }
+
+/* TestPinnedVersions 只回釘選引擎 未釘選不列入 */
+func TestPinnedVersions(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VIGILA_ENGINES_DIR", dir)
+
+	if err := writeLockEntry(dir, "gitleaks", lockEntry{Version: "8.30.1", Pinned: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeLockEntry(dir, "trivy", lockEntry{Version: "0.60.0", Pinned: false}); err != nil {
+		t.Fatal(err)
+	}
+
+	pins := PinnedVersions()
+	if pins["gitleaks"] != "8.30.1" {
+		t.Errorf("gitleaks 應釘選 8.30.1 實際 %q", pins["gitleaks"])
+	}
+	if _, ok := pins["trivy"]; ok {
+		t.Error("未釘選的 trivy 不應出現在 PinnedVersions")
+	}
+}

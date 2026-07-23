@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-07-23
+
 ### Fixed
 - **openvas**：GMP 呼叫改以 `docker compose exec --user gvm` 執行——gvm-tools 明確拒絕以 root 執行，而 exec 預設為 root，先前無法在真環境運作（本機實跑 immauss/openvas 掃描發現並修正，補真實 get_reports XML 的 regression fixture）
 
@@ -130,7 +132,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/cluion/vigila/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/cluion/vigila/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/cluion/vigila/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/cluion/vigila/compare/v0.20.0...v0.21.0

@@ -70,6 +70,13 @@ var builtinProfiles = map[string]Profile{
 		Engines:     []string{"nuclei"},
 		FailFast:    false,
 	},
+	"web-deep": {
+		Name:        "web-deep",
+		Description: "網頁深度掃描 全 DAST 引擎 target 為 URL 較耗時",
+		/* 由輕到重 nuclei template 快 nikto 掃 header sqlmap 探注入 zap 主被動最重 */
+		Engines:  []string{"nuclei", "nikto", "sqlmap", "zap"},
+		FailFast: false,
+	},
 	"va-only": {
 		Name:        "va-only",
 		Description: "網路服務弱點評估 VA target 為 host 或 IP",

@@ -55,6 +55,7 @@ func NewScanCmd() *cobra.Command {
   code-audit    SAST 加 Secret
   full          原始碼全類型 SAST SCA Secret
   dast-only     僅 DAST nuclei
+  web-deep      網頁深度 全 DAST nuclei nikto sqlmap zap 較耗時
   va-only       僅 VA nmap`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

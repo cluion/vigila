@@ -6,7 +6,12 @@
 
 ## [Unreleased]
 
+### Added
+- `web-deep` 內建 profile：一次跑全 DAST 引擎（nuclei + nikto + sqlmap + zap）做網頁深度掃描，不 FailFast
+
+### Tests
 - nikto、sqlmap 補真實工具輸出的 regression fixture（以本機故意含漏洞的容器 smoke test 驗證解析）
+- 新增 profile 測試：web-deep 引擎組合、ProfileNames 涵蓋、所有內建 profile 引擎名皆可解析
 
 ## [0.22.0] - 2026-07-22
 

@@ -147,6 +147,7 @@ Error: 引擎 nmap 不支援此目標
 | code-audit | semgrep + gitleaks | 程式碼資安審計 |
 | full | semgrep + trivy + gitleaks | 原始碼全類型 SAST SCA Secret |
 | dast-only | nuclei | 網頁動態掃描 target 為 URL |
+| web-deep | nuclei + nikto + sqlmap + zap | 網頁深度掃描 全 DAST 引擎 target 為 URL 較耗時 |
 | va-only | nmap | 網路服務弱點評估 target 為 host 或 IP |
 
 ### 網頁介面

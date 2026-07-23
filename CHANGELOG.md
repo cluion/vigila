@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-07-24
+
 ### Added
 - **整合測試 CI job**（build tag `integration`）：涵蓋單元測試碰不到的 subprocess/e2e 路徑——adapter `Run()`、cli `scan` 命令的 RunE、core 掃描執行。CI 以 vigila 自身 managed install 取得引擎（同時 e2e 驗證 installer），對植入密鑰的目錄跑 gitleaks 端到端並驗證 findings 寫入 DB
 
@@ -149,7 +151,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/cluion/vigila/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/cluion/vigila/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/cluion/vigila/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/cluion/vigila/compare/v0.22.0...v0.23.0

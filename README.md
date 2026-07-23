@@ -105,7 +105,7 @@ vigila engine list
 | DAST 深度掃描 | OWASP ZAP | 主被動網頁掃描 header CSP XSS 等 target 為 URL |
 | DAST 伺服器掃描 | Nikto | 網頁伺服器已知漏洞與設定缺陷 target 為 URL |
 | DAST 注入偵測 | SQLMap | SQL 注入探測 帶參數 URL target 為 URL |
-| VA 弱點評估 | Nmap | 網路服務偵測 target 為 host 或 IP |
+| VA 弱點評估 | Nmap | 網路服務偵測 + NSE vuln 腳本比對 CVE target 為 host 或 IP |
 | VA 弱點掃描 | OpenVAS/GVM | 完整弱點掃描 走 GMP 僅 docker target 為 host 或 IP |
 
 六類引擎互補 SAST 找自己寫的錯 SCA 找用的套件的洞 Secret 找寫死的密鑰 IaC 找基礎設施設定的錯 DAST 對運行中的網頁發請求 VA 盤點開放的服務
@@ -149,6 +149,7 @@ Error: 引擎 nmap 不支援此目標
 | dast-only | nuclei | 網頁動態掃描 target 為 URL |
 | web-deep | nuclei + nikto + sqlmap + zap | 網頁深度掃描 全 DAST 引擎 target 為 URL 較耗時 |
 | va-only | nmap | 網路服務弱點評估 target 為 host 或 IP |
+| va-deep | nmap + openvas | 網路深度弱點評估 服務盤點加完整掃描 target 為 host 需先起 openvas 容器 |
 
 ### 網頁介面
 

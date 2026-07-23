@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<nmaprun scanner="nmap" args="nmap -sV --script vuln -oX - scanme.example.org">
+  <host>
+    <address addr="10.0.0.5" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="scanme.example.org" type="user"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack"/>
+        <service name="ssh" product="OpenSSH" version="7.4"/>
+        <script id="vulners" output="cpe:/a:openbsd:openssh:7.4:&#10;    CVE-2021-28041   4.6   https://vulners.com/cve/CVE-2021-28041&#10;    CVE-2019-6111    5.8   https://vulners.com/cve/CVE-2019-6111">
+          <table key="cpe:/a:openbsd:openssh:7.4">
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2021-28041</elem>
+              <elem key="cvss">4.6</elem>
+              <elem key="is_exploit">false</elem>
+            </table>
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2019-6111</elem>
+              <elem key="cvss">5.8</elem>
+              <elem key="is_exploit">false</elem>
+            </table>
+          </table>
+        </script>
+      </port>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack"/>
+        <service name="http" product="nginx" version="1.14.0"/>
+        <script id="http-csrf" output="Couldn't find any CSRF vulnerabilities."/>
+        <script id="http-slowloris-check" output="VULNERABLE:&#10;    Slowloris DoS attack&#10;      State: LIKELY VULNERABLE"/>
+      </port>
+      <port protocol="tcp" portid="443">
+        <state state="closed" reason="reset"/>
+        <service name="https"/>
+      </port>
+    </ports>
+  </host>
+</nmaprun>

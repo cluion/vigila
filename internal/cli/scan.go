@@ -56,7 +56,8 @@ func NewScanCmd() *cobra.Command {
   full          原始碼全類型 SAST SCA Secret
   dast-only     僅 DAST nuclei
   web-deep      網頁深度 全 DAST nuclei nikto sqlmap zap 較耗時
-  va-only       僅 VA nmap`,
+  va-only       僅 VA nmap
+  va-deep       網路深度 nmap 加 openvas 需先起 openvas 容器`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]

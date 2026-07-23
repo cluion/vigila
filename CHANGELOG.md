@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Added
+- **nmap CVE 偵測**：nmap 掃描加 `--script vuln` 跑 NSE 弱點腳本，vulners 的結構化 CVE 表格逐一成 finding（severity 取 CVSS），其他腳本每支一筆（含 VULNERABLE 為 HIGH）——nmap 從服務盤點升級為真弱點掃描
+- **`va-deep` 內建 profile**：nmap + openvas 串接，服務盤點加完整弱點掃描（需先起 openvas 容器）
+
 ## [0.24.0] - 2026-07-23
 
 ### Fixed

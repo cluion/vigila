@@ -83,6 +83,13 @@ var builtinProfiles = map[string]Profile{
 		Engines:     []string{"nmap"},
 		FailFast:    false,
 	},
+	"va-deep": {
+		Name:        "va-deep",
+		Description: "網路深度弱點評估 nmap 服務盤點加 openvas 完整掃描 target 為 host 需先起 openvas 容器",
+		/* nmap 先快速盤點開放服務 openvas 再做完整弱點掃描（需 docker 容器已 up 且 feed 同步完） */
+		Engines:  []string{"nmap", "openvas"},
+		FailFast: false,
+	},
 }
 
 /* GetProfile 依名稱取得 profile 先查內建 再查檔案 */

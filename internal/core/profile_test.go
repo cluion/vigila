@@ -50,10 +50,33 @@ func TestWebDeepProfileEngines(t *testing.T) {
 	}
 }
 
-/* TestProfileNamesIncludesWebDeep 確認 web-deep 出現在可用 profile 清單 */
-func TestProfileNamesIncludesWebDeep(t *testing.T) {
-	if !strings.Contains(ProfileNames(), "web-deep") {
-		t.Errorf("ProfileNames 應含 web-deep 實際 %s", ProfileNames())
+/* TestVaDeepProfileEngines 確認 va-deep 為 nmap + openvas 且不 FailFast */
+func TestVaDeepProfileEngines(t *testing.T) {
+	p, ok := builtinProfiles["va-deep"]
+	if !ok {
+		t.Fatal("應內建 va-deep profile")
+	}
+	want := []string{"nmap", "openvas"}
+	if len(p.Engines) != len(want) {
+		t.Fatalf("va-deep 引擎數 = %d 預期 %d", len(p.Engines), len(want))
+	}
+	for i, e := range want {
+		if p.Engines[i] != e {
+			t.Errorf("va-deep 第 %d 個引擎 = %q 預期 %q", i, p.Engines[i], e)
+		}
+	}
+	if p.FailFast {
+		t.Error("va-deep 不應 FailFast")
+	}
+}
+
+/* TestProfileNamesIncludesDeep 確認 web-deep 與 va-deep 出現在可用 profile 清單 */
+func TestProfileNamesIncludesDeep(t *testing.T) {
+	names := ProfileNames()
+	for _, want := range []string{"web-deep", "va-deep"} {
+		if !strings.Contains(names, want) {
+			t.Errorf("ProfileNames 應含 %s 實際 %s", want, names)
+		}
 	}
 }
 

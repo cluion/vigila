@@ -55,6 +55,62 @@ func TestParse(t *testing.T) {
 	}
 }
 
+/*
+	TestParseVulnScripts 解析含 NSE vuln 腳本的 XML 驗證 CVE 與腳本 finding
+
+port 22 vulners 兩個 CVE 各成一筆 severity 取 CVSS
+port 80 兩支腳本 http-csrf 無 VULNERABLE 為 LOW slowloris 含 VULNERABLE 為 HIGH
+每個開放 port 仍先產一筆 nmap-service finding
+*/
+func TestParseVulnScripts(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "vuln.xml"))
+	if err != nil {
+		t.Fatalf("讀取 vuln fixture 失敗: %v", err)
+	}
+
+	s := &Scanner{}
+	findings, err := s.Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse 失敗: %v", err)
+	}
+
+	/* 2 開放 port 各 1 service + port22 2 CVE + port80 2 腳本 = 2+2+2 = 6 */
+	if len(findings) != 6 {
+		t.Fatalf("期望 6 筆 finding 實際 %d", len(findings))
+	}
+
+	byRule := map[string]model.Finding{}
+	for _, f := range findings {
+		if f.Host != "scanme.example.org" {
+			t.Errorf("host 不符 實際 %s", f.Host)
+		}
+		byRule[f.RuleID] = f
+	}
+
+	/* CVE finding severity 由 CVSS 換算 CVE-2019-6111 cvss 5.8 → MEDIUM */
+	cve, ok := byRule["CVE-2019-6111"]
+	if !ok {
+		t.Fatal("應有 CVE-2019-6111 finding")
+	}
+	if cve.Severity != model.SeverityMedium {
+		t.Errorf("CVSS 5.8 應為 MEDIUM 實際 %s", cve.Severity)
+	}
+	if cve.Port != "22" || cve.CVSSScore == nil || *cve.CVSSScore != 5.8 {
+		t.Errorf("CVE finding 欄位不符 port=%s cvss=%v", cve.Port, cve.CVSSScore)
+	}
+	if len(cve.References) != 1 || cve.References[0] != "CVE-2019-6111" {
+		t.Errorf("CVE 應入 references 實際 %v", cve.References)
+	}
+
+	/* 含 VULNERABLE 的腳本為 HIGH 無的為 LOW */
+	if slow := byRule["nmap-http-slowloris-check"]; slow.Severity != model.SeverityHigh {
+		t.Errorf("含 VULNERABLE 應為 HIGH 實際 %s", slow.Severity)
+	}
+	if csrf := byRule["nmap-http-csrf"]; csrf.Severity != model.SeverityLow {
+		t.Errorf("無 VULNERABLE 應為 LOW 實際 %s", csrf.Severity)
+	}
+}
+
 /* TestParseEmpty 確認空輸入不出錯 */
 func TestParseEmpty(t *testing.T) {
 	s := &Scanner{}
@@ -88,6 +144,9 @@ func TestBuildCommand(t *testing.T) {
 	}
 	if !containsStr(joined, "-sV") {
 		t.Error("應含 -sV")
+	}
+	if !containsStr(joined, "--script vuln") {
+		t.Error("應含 --script vuln")
 	}
 	if !containsStr(joined, "-oX - ") {
 		t.Error("應含 -oX -")

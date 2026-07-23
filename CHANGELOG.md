@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-07-23
+
 ### Added
 - **nmap CVE 偵測**：nmap 掃描加 `--script vuln` 跑 NSE 弱點腳本，vulners 的結構化 CVE 表格逐一成 finding（severity 取 CVSS），其他腳本每支一筆（含 VULNERABLE 為 HIGH）——nmap 從服務盤點升級為真弱點掃描
 - **`va-deep` 內建 profile**：nmap + openvas 串接，服務盤點加完整弱點掃描（需先起 openvas 容器）
@@ -141,7 +143,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/cluion/vigila/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/cluion/vigila/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/cluion/vigila/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/cluion/vigila/compare/v0.21.0...v0.22.0

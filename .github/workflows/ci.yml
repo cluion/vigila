@@ -74,3 +74,39 @@ jobs:
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec -quiet -exclude=G204,G304 ./...
+
+  # 整合測試 涵蓋單元測試碰不到的 subprocess/e2e 路徑（adapter Run、cli RunE、core 掃描執行）
+  # 以 build tag integration 隔離 需真實引擎 binary 這裡用 vigila 自身的 managed install 取得
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Frontend build（go:embed 需要 web/dist）
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Build vigila binary
+        run: go build -o bin/vigila ./cmd/vigila
+
+      - name: 以 vigila 自身安裝引擎（同時 e2e 驗證 installer）
+        run: |
+          ./bin/vigila engine install gitleaks
+
+      - name: 執行整合測試
+        run: go test -tags integration -v ./internal/integration/...

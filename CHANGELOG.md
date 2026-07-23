@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+### Added
+- **整合測試 CI job**（build tag `integration`）：涵蓋單元測試碰不到的 subprocess/e2e 路徑——adapter `Run()`、cli `scan` 命令的 RunE、core 掃描執行。CI 以 vigila 自身 managed install 取得引擎（同時 e2e 驗證 installer），對植入密鑰的目錄跑 gitleaks 端到端並驗證 findings 寫入 DB
+
+### Tests
+- 新增 `internal/integration` 套件：gitleaks 端到端掃描（Run + core + DB）、乾淨目錄零誤報、`scan` cobra 命令 e2e
+
 ## [0.25.0] - 2026-07-23
 
 ### Added

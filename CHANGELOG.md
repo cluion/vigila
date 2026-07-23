@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- **openvas**：GMP 呼叫改以 `docker compose exec --user gvm` 執行——gvm-tools 明確拒絕以 root 執行，而 exec 預設為 root，先前無法在真環境運作（本機實跑 immauss/openvas 掃描發現並修正，補真實 get_reports XML 的 regression fixture）
+
+### Docs
+- 記錄 openvas host 網路的埠衝突陷阱：主機 6379/5432 被佔用會使容器內 redis 啟動失敗、GVM 卡初始化
+
 ## [0.23.0] - 2026-07-23
 
 ### Added

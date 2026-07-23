@@ -39,7 +39,7 @@ make build
    - 在網頁引擎面板點 Docker 開關即可勾選 或手動 `echo "COMPOSE_PROFILES=semgrep,trivy" > .env`
    - 掃描時 vigila 自動以 `docker compose run` 執行 路徑型引擎同路徑掛載目標 nuclei/sqlmap 傳 URL 不掛載 gitleaks/ZAP/nikto 掛輸出目錄讀報告 見 `docker-compose.yml`
    - 目前支援 semgrep trivy grype trufflehog osv-scanner checkov zap nuclei gitleaks nmap nikto sqlmap（12 引擎以 `docker compose run` 一次性執行）
-   - **openvas** 特殊：為常駐服務 需先 `docker compose --profile openvas up -d` 起服務（首次會同步弱點 feed 較久）vigila 再以 `docker compose exec` 呼叫容器內 gvm-cli 走 GMP 協定建 target/task 輪詢完成後取報告
+   - **openvas** 特殊：為常駐服務 需先 `docker compose --profile openvas up -d` 起服務（首次會同步弱點 feed 約 15 分鐘）vigila 再以 `docker compose exec --user gvm` 呼叫容器內 gvm-cli 走 GMP 協定建 target/task 輪詢完成後取報告。使用 host 網路（僅 Linux Docker/OrbStack 生效）以掃內網主機；若主機 6379/5432 埠已被佔用會使容器內 redis 啟動失敗、GVM 卡在初始化，請先釋放這些埠或用專屬主機
 
 檢視每個引擎目前的版本與來源 `vigila engine list`
 

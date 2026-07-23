@@ -74,6 +74,54 @@ func TestParse(t *testing.T) {
 	}
 }
 
+/*
+	TestParseRealReport 以真實 GMP get_reports XML 驗證解析（regression fixture）
+
+fixture 取自 immauss/openvas 對 127.0.0.1 實際掃描的 get_reports 回應（redis + hostname 兩筆）
+含真實的 host chardata（127.0.0.1 後接 asset/hostname 子元素）與 port/nvt/threat 佈局
+確保 Parse 對真實 GVM 輸出的欄位抽取正確 防 struct 與實際結構漂移
+*/
+func TestParseRealReport(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "real_report.xml"))
+	if err != nil {
+		t.Fatalf("讀取真實 fixture 失敗: %v", err)
+	}
+
+	s := &Scanner{}
+	findings, err := s.Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse 真實報告失敗: %v", err)
+	}
+
+	if len(findings) != 2 {
+		t.Fatalf("真實報告期望 2 筆 finding 實際 %d", len(findings))
+	}
+
+	byPort := map[string]model.Finding{}
+	for _, f := range findings {
+		if f.Engine != "openvas" || f.Category != model.CategoryVA {
+			t.Errorf("engine/category 不符 得 %s/%s", f.Engine, f.Category)
+		}
+		/* host chardata 應只取 IP 不含子元素 hostname 文字 */
+		if f.Host != "127.0.0.1" {
+			t.Errorf("host 應為 127.0.0.1 實際 %q", f.Host)
+		}
+		if f.RuleID == "" || f.HashCode == "" {
+			t.Errorf("必要欄位為空 %+v", f)
+		}
+		byPort[f.Port] = f
+	}
+
+	/* redis 那筆 port 6379/tcp → 6379 數字埠 */
+	if _, ok := byPort["6379"]; !ok {
+		t.Errorf("應有埠號 6379 的 finding 實際埠別 %v", byPort)
+	}
+	/* general/tcp 無數字埠應原樣保留 */
+	if _, ok := byPort["general/tcp"]; !ok {
+		t.Errorf("應保留 general/tcp 埠別 實際 %v", byPort)
+	}
+}
+
 /* TestParseEmpty 確認空輸入不出錯 */
 func TestParseEmpty(t *testing.T) {
 	s := &Scanner{}

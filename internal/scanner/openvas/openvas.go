@@ -438,16 +438,23 @@ type gmp interface {
 	run(ctx context.Context, xmlCmd string) ([]byte, error)
 }
 
-/* dockerGMP 以 docker compose exec 呼叫容器內 gvm-cli 走 GMP socket */
+/*
+	dockerGMP 以 docker compose exec 呼叫容器內 gvm-cli 走 GMP socket
+
+user/password 為 GMP 帳密 execUser 為容器內執行 gvm-cli 的 OS 使用者
+（gvm-tools 拒絕以 root 執行 而 docker exec 預設為 root 故需明確指定非 root 使用者）
+*/
 type dockerGMP struct {
 	user     string
 	password string
+	execUser string
 }
 
 /*
-	newDockerGMP 建 docker GMP 通道 帳密取自環境變數
+	newDockerGMP 建 docker GMP 通道 帳密與執行使用者取自環境變數
 
 VIGILA_OPENVAS_USER / VIGILA_OPENVAS_PASSWORD 未設時用 immauss/openvas 預設 admin/admin
+VIGILA_OPENVAS_EXEC_USER 未設時用 gvm（immauss 影像跑 GVM 服務的非 root 使用者）
 */
 func newDockerGMP() *dockerGMP {
 	user := os.Getenv("VIGILA_OPENVAS_USER")
@@ -458,17 +465,22 @@ func newDockerGMP() *dockerGMP {
 	if pw == "" {
 		pw = "admin"
 	}
-	return &dockerGMP{user: user, password: pw}
+	execUser := os.Getenv("VIGILA_OPENVAS_EXEC_USER")
+	if execUser == "" {
+		execUser = "gvm"
+	}
+	return &dockerGMP{user: user, password: pw, execUser: execUser}
 }
 
 /*
 	run 以 docker compose exec 在 openvas 容器內執行 gvm-cli socket 指令
 
 --profile openvas 確保 service 啟用 -T 關閉 TTY 讓 stdout 可捕獲
+--user 指定非 root 使用者 因 gvm-tools 明確拒絕以 root 執行
 */
 func (d *dockerGMP) run(ctx context.Context, xmlCmd string) ([]byte, error) {
 	args := []string{
-		"compose", "--profile", engineName, "exec", "-T", engineName,
+		"compose", "--profile", engineName, "exec", "-T", "--user", d.execUser, engineName,
 		"gvm-cli", "--gmp-username", d.user, "--gmp-password", d.password,
 		"socket", "--socketpath", gmpSocketPath,
 		"--xml", xmlCmd,

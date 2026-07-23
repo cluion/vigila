@@ -79,8 +79,12 @@ services:
 
   # openvas 為 host 目標 immauss/openvas 單容器內含 GVM 全套服務與 GMP socket
   # 與其他引擎不同 為常駐服務 需先 docker compose --profile openvas up -d 起服務
-  # 首次啟動會同步弱點 feed 需時較久 vigila 以 docker compose exec 呼叫容器內 gvm-cli 走 GMP
-  # 需 host 網路才能掃到內網主機 僅 Linux Docker 與 OrbStack 真正生效
+  # 首次啟動會同步弱點 feed 需時較久（約 15 分鐘）vigila 以 docker compose exec 呼叫容器內
+  # gvm-cli 走 GMP vigila 已用 --user gvm 執行 因 gvm-tools 拒絕 root
+  #
+  # network_mode host 讓 openvas 掃得到內網主機 僅 Linux Docker 與 OrbStack 真正生效
+  # 注意 host 網路下容器內 redis 需綁 127.0.0.1:6379 若主機該埠已被佔用（如另一個
+  # redis 容器）redis 會啟動失敗使 GVM 卡在初始化 此時請釋放主機 6379/5432 或改用專屬主機
   openvas:
     image: immauss/openvas:latest
     profiles: [openvas]

@@ -9,6 +9,11 @@
 ### Added
 - **nmap CVE 偵測**：nmap 掃描加 `--script vuln` 跑 NSE 弱點腳本，vulners 的結構化 CVE 表格逐一成 finding（severity 取 CVSS），其他腳本每支一筆（含 VULNERABLE 為 HIGH）——nmap 從服務盤點升級為真弱點掃描
 - **`va-deep` 內建 profile**：nmap + openvas 串接，服務盤點加完整弱點掃描（需先起 openvas 容器）
+- **CONTRIBUTING / SECURITY / CODE_OF_CONDUCT** 與 issue／PR 範本，補齊社群協作文件
+
+### Tests
+- **API 契約測試**：鎖定 scans／findings／engines／stats／profiles 端點回應的核心 JSON 欄位與 envelope，防破壞性 wire format 變更
+- 大幅補強單元測試覆蓋率：scanner 基礎（DefaultRun／registry／docker 參數）、各引擎 metadata、api handlers 與 SSE／SPA、core profile 與 helper、store 開啟路徑、engine 純函式
 
 ## [0.24.0] - 2026-07-23
 

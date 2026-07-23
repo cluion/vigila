@@ -253,3 +253,17 @@ func TestInstallPinnedIntegration(t *testing.T) {
 		t.Errorf("lock 應記錄釘選 8.18.4 得 %+v", entry)
 	}
 }
+
+/* TestNewInstaller 確認預設安裝器欄位齊備 */
+func TestNewInstaller(t *testing.T) {
+	in := NewInstaller()
+	if in.GOOS == "" || in.GOARCH == "" {
+		t.Error("GOOS/GOARCH 應由 runtime 填入")
+	}
+	if in.Get == nil {
+		t.Error("Get 應預設為 httpGet")
+	}
+	if in.TrustedRoot == nil {
+		t.Error("TrustedRoot 應預設為 fetchTrustedRoot")
+	}
+}

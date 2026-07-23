@@ -6,6 +6,9 @@
 
 ## [Unreleased]
 
+### Security
+- 升級間接依賴 `google.golang.org/grpc` v1.82.0 → v1.82.1，消除 Dependabot high 警告（gRPC-Go xDS RBAC / HTTP/2）；經 sigstore-go 帶入，govulncheck 本就顯示未觸及漏洞路徑，屬預防性升級
+
 ## [0.26.0] - 2026-07-24
 
 ### Added

@@ -77,8 +77,12 @@ jobs:
 
   # 整合測試 涵蓋單元測試碰不到的 subprocess/e2e 路徑（adapter Run、cli RunE、core 掃描執行）
   # 以 build tag integration 隔離 需真實引擎 binary 這裡用 vigila 自身的 managed install 取得
+  # SCA(trivy/grype) 為 vuln DB 驅動 採「取 DB 可快取偶爾連網 / 跑測試離線確定性」兩步策略
   integration:
     runs-on: ubuntu-latest
+    env:
+      TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
+      GRYPE_DB_CACHE_DIR: ${{ github.workspace }}/.cache/grype
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,9 +108,40 @@ jobs:
       - name: Build vigila binary
         run: go build -o bin/vigila ./cmd/vigila
 
-      - name: 以 vigila 自身安裝引擎（同時 e2e 驗證 installer）
+      - name: 以 vigila 自身安裝引擎（同時 e2e 驗證 installer 與 cosign 簽章驗證）
         run: |
-          ./bin/vigila engine install gitleaks
+          for e in gitleaks trivy grype; do
+            ./bin/vigila engine install "$e"
+          done
+          echo "$HOME/.vigila/engines" >> "$GITHUB_PATH"
 
-      - name: 執行整合測試
+      # 快取鍵帶 ISO 週序 每週刷新一次 DB 其餘命中快取 兼顧新鮮度與穩定
+      - name: 計算 DB 快取週序
+        id: dbweek
+        run: echo "week=$(date +%Y-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: 還原 SCA vuln DB 快取
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.TRIVY_CACHE_DIR }}
+            ${{ env.GRYPE_DB_CACHE_DIR }}
+          key: sca-db-${{ steps.dbweek.outputs.week }}
+          restore-keys: |
+            sca-db-
+
+      # 取得 DB 這步可連網 快取命中時多為 no-op 加重試抗上游暫時性故障
+      # GITHUB_TOKEN 供 trivy 從 ghcr 拉 DB 避免匿名 rate limit
+      - name: 更新 SCA vuln DB（可連網 有快取則近乎 no-op）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in 1 2 3; do trivy image --download-db-only && break || sleep 15; done
+          for i in 1 2 3; do grype db update && break || sleep 15; done
+
+      # 跑測試離線 確定性 SCA 引擎不再連網更新 DB 只用上一步快取好的
+      - name: 執行整合測試（SCA 離線用快取 DB）
+        env:
+          TRIVY_SKIP_DB_UPDATE: "true"
+          GRYPE_DB_AUTO_UPDATE: "false"
         run: go test -tags integration -v ./internal/integration/...

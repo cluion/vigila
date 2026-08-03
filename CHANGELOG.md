@@ -6,6 +6,9 @@
 
 ## [Unreleased]
 
+### Added
+- **整合測試擴充 SCA 引擎**：`internal/integration` 加 trivy 與 grype 端到端測試——掃含已知漏洞相依（Django/PyYAML/requests 舊版）的目錄，驗證 findings 為 SCA 類別、帶套件名、且寫入 DB。CI 採「取 DB 可快取／跑測試離線」兩步策略：`actions/cache` 快取 trivy/grype vuln DB（ISO 週序輪替）、下載步驟加重試抗上游故障、測試步驟以 `TRIVY_SKIP_DB_UPDATE`／`GRYPE_DB_AUTO_UPDATE=false` 離線執行避免 flakiness
+
 ### Security
 - 升級間接依賴 `google.golang.org/grpc` v1.82.0 → v1.82.1，消除 Dependabot high 警告（gRPC-Go xDS RBAC / HTTP/2）；經 sigstore-go 帶入，govulncheck 本就顯示未觸及漏洞路徑，屬預防性升級
 

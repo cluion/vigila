@@ -6,6 +6,9 @@
 
 ## [Unreleased]
 
+### Tests
+- **整合測試涵蓋 docker profile 路徑**：新增 gitleaks docker 端到端測試，走 `docker compose run` 掃植入密鑰的目錄——補上先前 0% 的 `runDocker`。測試自足設定（清空 `VIGILA_ENGINES_DIR` 退到 docker 來源、`COMPOSE_PROFILES` env 啟用 profile、chdir 至 repo root 供 compose 尋 `docker-compose.yml`），docker 不可用時 skip
+
 ## [0.27.0] - 2026-08-03
 
 ### Added

@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-03
+
 ### Added
 - **整合測試擴充 SCA 引擎**：`internal/integration` 加 trivy 與 grype 端到端測試——掃含已知漏洞相依（Django/PyYAML/requests 舊版）的目錄，驗證 findings 為 SCA 類別、帶套件名、且寫入 DB。CI 採「取 DB 可快取／跑測試離線」兩步策略：`actions/cache` 快取 trivy/grype vuln DB（ISO 週序輪替）、下載步驟加重試抗上游故障、測試步驟以 `TRIVY_SKIP_DB_UPDATE`／`GRYPE_DB_AUTO_UPDATE=false` 離線執行避免 flakiness
 
@@ -157,7 +159,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/cluion/vigila/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/cluion/vigila/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/cluion/vigila/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/cluion/vigila/compare/v0.23.0...v0.24.0

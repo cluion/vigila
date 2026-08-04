@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-08-04
+
 ### Tests
 - **整合測試涵蓋 docker profile 路徑**：新增 gitleaks docker 端到端測試，走 `docker compose run` 掃植入密鑰的目錄——補上先前 0% 的 `runDocker`。測試自足設定（清空 `VIGILA_ENGINES_DIR` 退到 docker 來源、`COMPOSE_PROFILES` env 啟用 profile、chdir 至 repo root 供 compose 尋 `docker-compose.yml`），docker 不可用時 skip
 
@@ -162,7 +164,8 @@
 ### Added
 - MVP：三引擎（Semgrep/Trivy/Gitleaks）、CLI + Web、profile 流程、SSE、報告匯出（SARIF/JSON/HTML）
 
-[Unreleased]: https://github.com/cluion/vigila/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/cluion/vigila/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/cluion/vigila/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/cluion/vigila/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/cluion/vigila/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/cluion/vigila/compare/v0.24.0...v0.25.0
